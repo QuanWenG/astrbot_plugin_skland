@@ -1,0 +1,61 @@
+{
+  "auto_sign": {
+    "description": "启用每日自动签到",
+    "type": "bool",
+    "default": false,
+    "hint": "为全部已绑定账号执行明日方舟与终末地签到。"
+  },
+  "auto_sign_hour": {
+    "description": "自动签到小时",
+    "type": "int",
+    "default": 0,
+    "hint": "AstrBot 服务器本地时区，范围 0-23。"
+  },
+  "auto_sign_minute": {
+    "description": "自动签到分钟",
+    "type": "int",
+    "default": 15,
+    "hint": "范围 0-59。"
+  },
+  "credential_group_whitelist": {
+    "description": "绑定指令群聊白名单",
+    "type": "list",
+    "items": {
+      "type": "string"
+    },
+    "default": [],
+    "hint": "允许在这些群中使用绑定、扫码绑定和解绑。填写群 ID 或 /sid 返回的会话 ID；为空时仍仅限私聊。"
+  },
+  "browser_executable": {
+    "description": "Chromium/Edge 可执行文件",
+    "type": "string",
+    "default": "",
+    "hint": "留空时自动查找 Playwright Chromium、Windows Edge 或 Chrome。Linux 无浏览器时执行 playwright install chromium。"
+  },
+  "github_proxy_url": {
+    "description": "GitHub download proxy prefix",
+    "type": "string",
+    "default": ""
+  },
+  "github_token": {
+    "description": "GitHub Token",
+    "type": "string",
+    "default": "",
+    "hint": "Optional; used only when GitHub API rate limits resource sync."
+  },
+  "endfield_background_simple": {
+    "description": "终末地卡片默认简化背景",
+    "type": "bool",
+    "default": false
+  },
+  "gacha_render_max": {
+    "description": "方舟抽卡单图最大卡池数",
+    "type": "int",
+    "default": 30
+  },
+  "ef_gacha_render_max": {
+    "description": "终末地抽卡单图各分类最大卡池数",
+    "type": "int",
+    "default": 5
+  }
+}
