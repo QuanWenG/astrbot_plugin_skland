@@ -35,6 +35,7 @@ def test_all_source_shortcuts_are_registered():
         "终末地抽卡更新",
         "战绩详情",
         "收藏战绩详情",
+        "树海肉鸽",
         "界园肉鸽",
         "萨卡兹肉鸽",
         "萨米肉鸽",

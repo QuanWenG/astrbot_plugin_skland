@@ -51,7 +51,7 @@ class SklandService:
     async def require_account(self, owner_id: str) -> Account:
         account = await self.store.get_account(owner_id)
         if not account:
-            raise ValueError("尚未绑定森空岛账号，请先私聊使用 森空岛绑定 <token|cred>")
+            raise ValueError("尚未绑定森空岛账号，请使用 /扫码绑定")
         return account
 
     async def sync_characters(self, owner_id: str) -> list[Character]:
@@ -193,6 +193,7 @@ class SklandService:
             "萨米": "rogue_3",
             "萨卡兹": "rogue_4",
             "界园": "rogue_5",
+            "黑流树海": "rogue_6",
         }
         topic_id = topic_map.get(topic or "", topic or "")
         data = await self._with_refresh(

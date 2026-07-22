@@ -124,7 +124,7 @@ class LocalHtmlRenderer:
         )
         page = await context.new_page()
         try:
-            await page.goto(html_path.as_uri(), wait_until="load", timeout=30_000)
+            await page.goto(html_path.as_uri(), wait_until="domcontentloaded", timeout=30_000)
             with suppress(Exception):
                 await page.wait_for_load_state("networkidle", timeout=10_000)
             await page.wait_for_timeout(300)

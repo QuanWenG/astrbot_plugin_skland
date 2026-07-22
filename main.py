@@ -215,6 +215,11 @@ class SklandPlugin(Star):
             yield result
 
     # 中文肉鸽快捷指令
+    @filter.command("树海肉鸽")
+    async def shortcut_rogue_6(self, event: AstrMessageEvent):
+        async for result in self._run(event, ["rogue", "黑流树海"]):
+            yield result
+
     @filter.command("界园肉鸽")
     async def shortcut_rogue_5(self, event: AstrMessageEvent):
         async for result in self._run(event, ["rogue", "界园"]):
@@ -497,6 +502,7 @@ class SklandPlugin(Star):
             "rogue_3": "pic_rogue_3_KV2.png",
             "rogue_4": "pic_rogue_4_47.png",
             "rogue_5": "pic_rogue_5_KV1.png",
+            "rogue_6": "pic_rogue_6_kv1.png",
         }
         filename = mapping.get(topic, "kv_epoque14.png")
         return (RES_DIR / "images" / "background" / "rogue" / filename).as_uri()

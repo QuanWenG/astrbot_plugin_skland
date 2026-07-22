@@ -20,6 +20,7 @@ class Topics:
         "萨米": "rogue_3",
         "萨卡兹": "rogue_4",
         "界园": "rogue_5",
+        "黑流树海": "rogue_6",
     }
 
     def __post_init__(self):
