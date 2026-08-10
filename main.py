@@ -3,11 +3,9 @@ import shlex
 from collections.abc import AsyncGenerator
 from contextlib import suppress
 from datetime import datetime, timedelta
-from io import BytesIO
 
-import qrcode
 from astrbot.api import AstrBotConfig, logger
-from astrbot.api.event import AstrMessageEvent, filter
+from astrbot.api.event import AstrMessageEvent, MessageChain, filter
 from astrbot.api.message_components import At, Image, Plain
 from astrbot.api.star import Context, Star, StarTools, register
 from astrbot.core.star.filter.command import GreedyStr
@@ -20,31 +18,38 @@ from .skland.cards import (
     render_ef_card,
     render_ef_gacha_history,
     render_gacha_history,
+    render_operator_roster,
     render_rogue_card,
     render_rogue_info,
 )
+from .skland.box_pagination import parse_box_page_arguments
 from .skland.config import RES_DIR, configure_paths
 from .skland.config import config as runtime_config
 from .skland.exception import SklandError
 from .skland.gacha import group_arknights_records, group_endfield_records
 from .skland.renderer import RenderError, renderer
+from .skland.image_output import ImageDeliveryError, image_output
+from .skland.operator_snapshot import build_operator_snapshot
 from .skland.resourcesync import game_data, sync_images
+from .skland.qrcode_card import fetch_user_avatar, render_qrcode_card
+from .skland.qq_message import send_with_receipt
 from .skland.service import ARKNIGHTS, ENDFIELD, SklandService
 from .skland.store import SklandStore
 
 HELP = """森空岛助手（sk / skland）
-绑定：森空岛绑定 <token|cred>｜扫码绑定｜森空岛解绑 确认
+绑定：森空岛绑定 <token|cred>｜扫码绑定/扫码登录｜森空岛解绑 确认
 角色：/sk card｜/sk efcard [-a] [-s]｜角色更新
 签到：明日方舟签到｜签到详情｜终末地签到｜终末地签到详情
-肉鸽：界园/萨卡兹/萨米/水月/傀影肉鸽｜战绩详情 <序号> [-f]
+肉鸽：树海/界园/萨卡兹/萨米/水月/傀影肉鸽｜战绩详情 <序号> [-f]
 抽卡：方舟抽卡记录 [-b 起始] [-l 结束]｜导入抽卡记录 <URL>
       终末地抽卡记录｜终末地抽卡更新
 其他：/sk clue｜资源更新｜/sk help
+干员：方舟干员 [@用户] [筛选词...]｜/sk box [筛选词] [页码]
 管理员：全体签到｜全体签到详情｜终末地全体签到｜全体角色更新"""
 
 
 @register(
-    "astrbot_plugin_skland", "AoiNyanko", "森空岛明日方舟/终末地查询与签到插件", "2.0.0"
+    "astrbot_plugin_skland", "AoiNyanko", "森空岛明日方舟/终末地查询与签到插件", "2.2.0"
 )
 class SklandPlugin(Star):
     def __init__(self, context: Context, config: AstrBotConfig):
@@ -72,6 +77,32 @@ class SklandPlugin(Star):
         runtime_config.ef_gacha_render_max = max(
             1, int(self.config.get("ef_gacha_render_max", 5))
         )
+        runtime_config.render_timeout = max(1, int(self.config.get("render_timeout", 180000)))
+        runtime_config.ark_portrait_cache_enabled = bool(
+            self.config.get("ark_portrait_cache_enabled", False)
+        )
+        runtime_config.ark_card_cache_ttl = max(1, int(self.config.get("ark_card_cache_ttl", 120)))
+        runtime_config.ark_card_cache_max_entries = max(
+            1, int(self.config.get("ark_card_cache_max_entries", 64))
+        )
+        runtime_config.roster_render_max = max(1, int(self.config.get("roster_render_max", 16)))
+        runtime_config.roster_render_format = str(
+            self.config.get("roster_render_format", "jpeg")
+        ).lower()
+        if runtime_config.roster_render_format not in {"png", "jpeg"}:
+            runtime_config.roster_render_format = "jpeg"
+        runtime_config.roster_jpeg_quality = max(
+            1, min(100, int(self.config.get("roster_jpeg_quality", 90)))
+        )
+        runtime_config.qq_image_max_bytes = max(
+            1024, int(self.config.get("qq_image_max_bytes", 4194304))
+        )
+        runtime_config.qq_image_max_side = max(
+            256, int(self.config.get("qq_image_max_side", 4096))
+        )
+        runtime_config.qq_image_jpeg_quality = max(
+            1, min(100, int(self.config.get("qq_image_jpeg_quality", 88)))
+        )
         renderer.configure(
             self.data_dir, str(self.config.get("browser_executable", ""))
         )
@@ -88,8 +119,14 @@ class SklandPlugin(Star):
                 await self._daily_task
         await renderer.close()
 
+    async def export_arknights_operator_snapshot(self, owner_id: str) -> dict:
+        """Export the default Arknights role as a credential-free snapshot."""
+        role = await self.service.require_character(owner_id, ARKNIGHTS)
+        roster = await self.service.operator_roster(owner_id)
+        return build_operator_snapshot(role, roster)
+
     @filter.command("skland", alias={"sk"})
-    async def skland(self, event: AstrMessageEvent, args: GreedyStr = ""):
+    async def skland(self, event: AstrMessageEvent, args: GreedyStr):
         """森空岛助手；不带参数时查询明日方舟角色卡。"""
         try:
             argv = shlex.split(str(args)) if str(args).strip() else ["card"]
@@ -103,12 +140,17 @@ class SklandPlugin(Star):
 
     # 中文快捷指令：绑定相关
     @filter.command("森空岛绑定")
-    async def shortcut_bind(self, event: AstrMessageEvent, args: GreedyStr = ""):
+    async def shortcut_bind(self, event: AstrMessageEvent, args: GreedyStr):
         async for result in self._run(event, ["bind", *shlex.split(str(args))]):
             yield result
 
     @filter.command("扫码绑定")
     async def shortcut_qrcode(self, event: AstrMessageEvent):
+        async for result in self._run(event, ["qrcode"]):
+            yield result
+
+    @filter.command("扫码登录")
+    async def shortcut_qrcode_login(self, event: AstrMessageEvent):
         async for result in self._run(event, ["qrcode"]):
             yield result
 
@@ -169,13 +211,13 @@ class SklandPlugin(Star):
             yield result
 
     @filter.command("资源更新")
-    async def shortcut_sync(self, event: AstrMessageEvent, args: GreedyStr = ""):
+    async def shortcut_sync(self, event: AstrMessageEvent, args: GreedyStr):
         async for result in self._run(event, ["sync", *shlex.split(str(args))]):
             yield result
 
     # 中文快捷指令：抽卡和详情
     @filter.command("方舟抽卡记录")
-    async def shortcut_gacha(self, event: AstrMessageEvent, args: GreedyStr = ""):
+    async def shortcut_gacha(self, event: AstrMessageEvent, args: GreedyStr):
         async for result in self._run(event, ["gacha", *shlex.split(str(args))]):
             yield result
 
@@ -195,18 +237,23 @@ class SklandPlugin(Star):
             yield result
 
     @filter.command("ef")
-    async def shortcut_efcard(self, event: AstrMessageEvent, args: GreedyStr = ""):
+    async def shortcut_efcard(self, event: AstrMessageEvent, args: GreedyStr):
         async for result in self._run(event, ["efcard", *shlex.split(str(args))]):
             yield result
 
     @filter.command("zmd")
-    async def shortcut_zmd_card(self, event: AstrMessageEvent, args: GreedyStr = ""):
+    async def shortcut_zmd_card(self, event: AstrMessageEvent, args: GreedyStr):
         async for result in self._run(event, ["efcard", *shlex.split(str(args))]):
             yield result
 
     @filter.command("战绩详情")
-    async def shortcut_rginfo(self, event: AstrMessageEvent, args: GreedyStr = ""):
+    async def shortcut_rginfo(self, event: AstrMessageEvent, args: GreedyStr):
         async for result in self._run(event, ["rginfo", *shlex.split(str(args))]):
+            yield result
+
+    @filter.command("方舟干员")
+    async def shortcut_box(self, event: AstrMessageEvent, args: GreedyStr):
+        async for result in self._run(event, ["box", *shlex.split(str(args))]):
             yield result
 
     @filter.command("收藏战绩详情")
@@ -267,7 +314,7 @@ class SklandPlugin(Star):
                     raise ValueError(
                         "该操作会删除所有绑定数据，请发送：森空岛解绑 确认"
                     )
-                deleted = await self.store.delete_account(owner_id)
+                deleted = await self.service.unbind(owner_id)
                 yield event.plain_result("解绑成功" if deleted else "当前账号尚未绑定")
             elif command == "char":
                 async for result in self._char_update(event, owner_id, argv):
@@ -290,6 +337,38 @@ class SklandPlugin(Star):
                 background = self._rogue_background(data.topic)
                 yield await self._image_result(
                     event, await render_rogue_card(data, background), "rogue"
+                )
+            elif command == "box":
+                target_owner, args = self._box_target_owner(event, argv[1:])
+                page_args = parse_box_page_arguments(args)
+                filters, options = self._box_arguments(list(page_args.query_args))
+                roster = await self.service.operator_roster(
+                    target_owner, filters=tuple(filters), options=options
+                )
+                if not roster.cards:
+                    yield event.plain_result(
+                        f"没有匹配的干员 · {roster.summary}"
+                    )
+                    return
+                page_size = runtime_config.roster_render_max
+                total_pages = (len(roster.cards) + page_size - 1) // page_size
+                if page_args.page > total_pages:
+                    raise ValueError(
+                        f"Box 页码超出范围：共 {total_pages} 页，"
+                        f"当前请求第 {page_args.page} 页"
+                    )
+                start = (page_args.page - 1) * page_size
+                cards = roster.cards[start : start + page_size]
+                if total_pages > 1:
+                    yield event.plain_result(
+                        f"Box 第 {page_args.page}/{total_pages} 页 · "
+                        f"共 {len(roster.cards)} 名干员"
+                    )
+                image = await render_operator_roster(
+                    props=roster.with_cards(cards), background_image=None
+                )
+                yield await self._image_result(
+                    event, image, f"box-{page_args.page}"
                 )
             elif command == "rginfo":
                 if len(argv) < 2:
@@ -467,16 +546,27 @@ class SklandPlugin(Star):
         )
 
     async def _qrcode_login(self, event: AstrMessageEvent, owner_id: str):
+        raw_message = getattr(event.message_obj, "raw_message", None)
+        author = getattr(raw_message, "author", None)
+        avatar_url = getattr(author, "avatar", None)
+        avatar = await fetch_user_avatar(avatar_url)
         scan_id = await SklandLoginAPI.get_scan()
-        image = qrcode.make(f"hypergryph://scan_login?scanId={scan_id}")
-        qr_buffer = BytesIO()
-        image.save(qr_buffer, format="PNG")
-        yield event.chain_result(
-            [
-                Plain("请使用森空岛 App 扫码，二维码约 100 秒内有效。"),
-                Image.fromBytes(qr_buffer.getvalue()),
-            ]
+        qr_image = render_qrcode_card(
+            f"hypergryph://scan_login?scanId={scan_id}", avatar
         )
+        sender_name = str(event.get_sender_name() or "").strip() or "用户"
+        qr_components = [
+            Plain(
+                f"{sender_name} 请使用森空岛 App 扫码，"
+                "二维码约 100 秒内有效。"
+            ),
+            Image.fromBytes(qr_image),
+        ]
+        qr_receipt = None
+        if event.get_platform_name() == "qq_official":
+            qr_receipt = await send_with_receipt(event, MessageChain(qr_components))
+        else:
+            yield event.chain_result(qr_components)
         deadline = asyncio.get_running_loop().time() + 100
         scan_code = None
         while asyncio.get_running_loop().time() < deadline:
@@ -490,10 +580,65 @@ class SklandPlugin(Star):
             return
         token = await SklandLoginAPI.get_token_by_scan_code(scan_code)
         chars = await self.service.bind_scan_token(owner_id, token)
+        if qr_receipt is not None:
+            await qr_receipt.recall()
         yield event.plain_result(self._sync_message("扫码绑定成功", chars))
 
     async def _image_result(self, event: AstrMessageEvent, content: bytes, prefix: str):
-        return event.chain_result([Image.fromBytes(content)])
+        try:
+            prepared = image_output.prepare(event.get_platform_name(), content, prefix)
+        except ImageDeliveryError as exc:
+            raise ValueError(str(exc)) from exc
+        return event.chain_result([Image.fromBytes(prepared)])
+
+    @staticmethod
+    def _box_arguments(args: list[str]) -> tuple[list[str], dict[str, str]]:
+        aliases = {
+            "-o": "ownership", "--ownership": "ownership", "ownership": "ownership",
+            "-r": "rarities", "--rarity": "rarities", "rarity": "rarities",
+            "-p": "professions", "--profession": "professions", "profession": "professions",
+            "-b": "branches", "--branch": "branches", "branch": "branches",
+            "--position": "positions", "position": "positions",
+            "--gender": "genders", "gender": "genders",
+            "-f": "factions", "--faction": "factions", "faction": "factions",
+            "--race": "races", "race": "races",
+            "--potential": "potentials", "potential": "potentials",
+            "-s": "sort", "--sort": "sort", "sort": "sort",
+            "-n": "name", "--name": "name", "name": "name",
+        }
+        filters: list[str] = []
+        options: dict[str, str] = {}
+        index = 0
+        while index < len(args):
+            key = aliases.get(args[index])
+            if key is None:
+                filters.append(args[index])
+                index += 1
+                continue
+            if index + 1 >= len(args):
+                raise ValueError(f"参数 {args[index]} 缺少值")
+            options[key] = args[index + 1]
+            index += 2
+        return filters, options
+
+    @classmethod
+    def _box_target_owner(
+        cls, event: AstrMessageEvent, args: list[str]
+    ) -> tuple[str, list[str]]:
+        platform = event.get_platform_id()
+        for segment in event.get_messages():
+            if isinstance(segment, At) and str(segment.qq) not in {
+                "all",
+                str(event.get_self_id()),
+            }:
+                return f"{platform}:{segment.qq}", args
+
+        target_markers = {"用户", "user", "--user", "--target", "目标"}
+        if len(args) >= 2 and args[0].casefold() in target_markers:
+            if not args[1].isdigit():
+                raise ValueError(f"{args[0]} 后需要填写平台数字用户 ID")
+            return f"{platform}:{args[1]}", args[2:]
+        return cls._owner_id(event), args
 
     def _rogue_background(self, topic: str) -> str:
         mapping = {

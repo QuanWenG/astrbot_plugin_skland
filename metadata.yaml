@@ -1,6 +1,6 @@
 name: astrbot_plugin_skland
 display_name: 森空岛助手
-desc: 适配 AstrBot 的森空岛插件，支持明日方舟与终末地绑定、签到、角色信息、肉鸽和抽卡查询。
-version: v2.0.0
+desc: 适配 AstrBot 的森空岛插件，支持明日方舟与终末地绑定、签到、角色信息、干员 Box、肉鸽和抽卡查询。
+version: v2.2.0
 author: QuanWenG
 repo: https://github.com/QuanWenG/astrbot_plugin_skland

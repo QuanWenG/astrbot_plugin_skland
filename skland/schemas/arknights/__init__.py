@@ -11,6 +11,16 @@ from .gacha import GachaTitleInfo as GachaTitleInfo
 from .gacha import GroupedGachaRecord as GroupedGachaRecord
 from .game_data import CharTable as CharTable
 from .game_data import GachaDetails as GachaDetails
+from .game_data import OperatorCatalog as OperatorCatalog
+from .game_data import OperatorCatalogEntry as OperatorCatalogEntry
+from .game_data import OperatorMetadata as OperatorMetadata
+from .game_data import OperatorMetadataSnapshot as OperatorMetadataSnapshot
+from .operators import OperatorCard as OperatorCard
+from .operators import OperatorModule as OperatorModule
+from .operators import OperatorOwnership as OperatorOwnership
+from .operators import OperatorRoster as OperatorRoster
+from .operators import OperatorRosterQuery as OperatorRosterQuery
+from .operators import OperatorSort as OperatorSort
 from .models import AssistChar as AssistChar
 from .models import Avatar as Avatar
 from .models import Clue as Clue

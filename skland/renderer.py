@@ -1,11 +1,18 @@
 import asyncio
+import logging
 import os
 import tempfile
+from time import monotonic
 from contextlib import suppress
 from pathlib import Path
 from typing import Any
 
 from jinja2 import Environment, FileSystemLoader
+
+from .config import config
+from .image_cache import collect_missing_images, write_cached_image
+
+logger = logging.getLogger("astrbot")
 
 
 class RenderError(RuntimeError):
@@ -97,14 +104,25 @@ class LocalHtmlRenderer:
         filters: dict[str, Any] | None = None,
         pages: dict[str, Any] | None = None,
         device_scale_factor: float = 1,
+        wait: int = 0,
+        type: str = "png",
+        quality: int | None = None,
+        screenshot_timeout: float | None = None,
+        readiness: str = "networkidle",
         **_: Any,
     ) -> bytes:
+        started = monotonic()
         await self.start()
         root = Path(template_path).resolve()
         env = Environment(loader=FileSystemLoader(root), autoescape=False)
         if filters:
             env.filters.update(filters)
-        html = env.get_template(template_name).render(**templates)
+        if config.ark_portrait_cache_enabled:
+            with collect_missing_images() as pending_images:
+                html = env.get_template(template_name).render(**templates)
+        else:
+            pending_images = set()
+            html = env.get_template(template_name).render(**templates)
         base = root.as_uri().rstrip("/") + "/"
         if "<head>" in html:
             html = html.replace("<head>", f'<head><base href="{base}">', 1)
@@ -123,12 +141,60 @@ class LocalHtmlRenderer:
             device_scale_factor=device_scale_factor,
         )
         page = await context.new_page()
+        cache_tasks: list[asyncio.Task[None]] = []
+        pending_by_url = dict(pending_images)
+
+        async def cache_response(response) -> None:
+            path = pending_by_url.get(response.url)
+            if path is None or not 200 <= response.status < 300:
+                return
+            content_type = response.headers.get("content-type", "").lower()
+            if not content_type.startswith("image/"):
+                return
+            try:
+                write_cached_image(path, await response.body())
+            except Exception as exc:
+                logger.warning("立绘缓存写入失败 %s: %s", response.url, exc)
+
+        def on_response(response) -> None:
+            if response.url in pending_by_url:
+                cache_tasks.append(asyncio.create_task(cache_response(response)))
+
+        if pending_by_url:
+            page.on("response", on_response)
         try:
-            await page.goto(html_path.as_uri(), wait_until="domcontentloaded", timeout=30_000)
-            with suppress(Exception):
-                await page.wait_for_load_state("networkidle", timeout=10_000)
-            await page.wait_for_timeout(300)
-            return await page.screenshot(type="png", full_page=True)
+            timeout = screenshot_timeout or config.render_timeout
+            await page.goto(
+                html_path.as_uri(), wait_until="domcontentloaded", timeout=timeout
+            )
+            if readiness == "resources":
+                await asyncio.wait_for(
+                    page.evaluate(
+                        """async () => { await document.fonts.ready; await Promise.all(
+                        Array.from(document.images, async image => { if (!image.complete)
+                        await new Promise(resolve => { image.addEventListener('load', resolve,
+                        {once:true}); image.addEventListener('error', resolve, {once:true}); });
+                        try { await image.decode(); } catch {} })); }"""
+                    ),
+                    timeout=timeout / 1000,
+                )
+            else:
+                with suppress(Exception):
+                    await page.wait_for_load_state("networkidle", timeout=timeout)
+            await page.wait_for_timeout(wait or 300)
+            screenshot = await page.screenshot(
+                type=type, full_page=True, quality=quality, timeout=timeout
+            )
+            if cache_tasks:
+                await asyncio.gather(*cache_tasks, return_exceptions=True)
+            logger.info(
+                "Skland 渲染完成 template=%s format=%s bytes=%d elapsed=%.2fs",
+                template_name,
+                type,
+                len(screenshot),
+                monotonic() - started,
+            )
+            return screenshot
         finally:
             await context.close()
             with suppress(OSError):

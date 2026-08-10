@@ -14,6 +14,16 @@ from .arknights import GachaPull as GachaPull
 from .arknights import GachaResponse as GachaResponse
 from .arknights import GachaTable as GachaTable
 from .arknights import GachaTitleInfo as GachaTitleInfo
+from .arknights import OperatorCard as OperatorCard
+from .arknights import OperatorCatalog as OperatorCatalog
+from .arknights import OperatorCatalogEntry as OperatorCatalogEntry
+from .arknights import OperatorMetadata as OperatorMetadata
+from .arknights import OperatorMetadataSnapshot as OperatorMetadataSnapshot
+from .arknights import OperatorModule as OperatorModule
+from .arknights import OperatorOwnership as OperatorOwnership
+from .arknights import OperatorRoster as OperatorRoster
+from .arknights import OperatorRosterQuery as OperatorRosterQuery
+from .arknights import OperatorSort as OperatorSort
 from .arknights import GroupedGachaRecord as GroupedGachaRecord
 from .arknights import RogueCareer as RogueCareer
 from .arknights import RogueData as RogueData

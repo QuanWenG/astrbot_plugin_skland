@@ -4,6 +4,12 @@ from pydantic import AnyUrl as Url
 
 from .config import RES_DIR, TEMPLATES_DIR, config
 from .filters import (
+    ark_profession_icon_url,
+    ark_rarity_icon_url,
+    ark_roster_lh_url,
+    ark_roster_light_url,
+    ark_skin_portrait_url,
+    ark_uniequip_icon_url,
     charId_to_avatarUrl,
     charId_to_portraitUrl,
     ef_charId_to_avatarUrl,
@@ -31,9 +37,41 @@ from .schemas import (
     EndfieldCard,
     GroupedGachaRecord,
     PlayerBase,
+    OperatorRoster,
     RogueData,
     Status,
 )
+
+
+async def render_operator_roster(
+    *, props: OperatorRoster, background_image: str | Url | None
+) -> bytes:
+    return await template_to_pic(
+        template_path=str(TEMPLATES_DIR),
+        template_name="operator_roster.html.jinja2",
+        templates={"props": props, "background_image": background_image},
+        filters={
+            "ark_profession_icon_url": ark_profession_icon_url,
+            "ark_rarity_icon_url": ark_rarity_icon_url,
+            "ark_roster_lh_url": ark_roster_lh_url,
+            "ark_roster_light_url": ark_roster_light_url,
+            "ark_skin_portrait_url": ark_skin_portrait_url,
+            "ark_uniequip_icon_url": ark_uniequip_icon_url,
+        },
+        pages={
+            "viewport": {"width": 706, "height": 1},
+            "base_url": f"file://{TEMPLATES_DIR}",
+        },
+        device_scale_factor=1.5,
+        screenshot_timeout=config.render_timeout,
+        readiness="resources",
+        type=config.roster_render_format,
+        quality=(
+            config.roster_jpeg_quality
+            if config.roster_render_format == "jpeg"
+            else None
+        ),
+    )
 
 
 async def render_ark_card(props: ArkCard, bg: str | Url) -> bytes:
@@ -66,6 +104,7 @@ async def render_ark_card(props: ArkCard, bg: str | Url) -> bytes:
             "viewport": {"width": 706, "height": 1160},
             "base_url": f"file://{TEMPLATES_DIR}",
         },
+        screenshot_timeout=config.render_timeout,
     )
 
 
@@ -92,6 +131,7 @@ async def render_rogue_card(props: RogueData, bg: str | Url) -> bytes:
             "base_url": f"file://{TEMPLATES_DIR}",
         },
         device_scale_factor=1.5,
+        screenshot_timeout=config.render_timeout,
     )
 
 
@@ -130,6 +170,7 @@ async def render_rogue_info(
             "base_url": f"file://{TEMPLATES_DIR}",
         },
         device_scale_factor=1.5,
+        screenshot_timeout=config.render_timeout,
     )
 
 
@@ -145,6 +186,7 @@ async def render_clue_board(props: Clue):
             "base_url": f"file://{TEMPLATES_DIR}",
         },
         device_scale_factor=1.5,
+        screenshot_timeout=config.render_timeout,
     )
 
 
@@ -160,7 +202,8 @@ async def render_gacha_history(
         template_name="gacha.html.jinja2",
         templates={
             "record": props,
-            "character": char,
+            "nickname": char.nickname,
+            "channel_master_id": char.channel_master_id,
             "status": status,
             "start_index": begin,
             "end_index": limit,
@@ -174,6 +217,7 @@ async def render_gacha_history(
             "base_url": f"file://{TEMPLATES_DIR}",
         },
         device_scale_factor=1.5,
+        screenshot_timeout=config.render_timeout,
     )
 
 
@@ -217,6 +261,7 @@ async def render_ef_gacha_history(
             "base_url": f"file://{TEMPLATES_DIR}",
         },
         device_scale_factor=1.5,
+        screenshot_timeout=config.render_timeout,
     )
 
 
@@ -313,4 +358,5 @@ async def render_ef_card(
             "viewport": {"width": 706, "height": 1},
             "base_url": f"file://{TEMPLATES_DIR}",
         },
+        screenshot_timeout=config.render_timeout,
     )

@@ -8,10 +8,18 @@ import httpx
 from pydantic import TypeAdapter
 
 from .api import SklandAPI, SklandLoginAPI
+from .card_cache import ark_card_cache
 from .exception import LoginException, RequestException, UnauthorizedException
 from .models import Account, Character, GachaRecord
 from .resourcesync import game_data
-from .schemas import CRED, EfGroupedGachaRecord, EndfieldPoolType, RogueData
+from .schemas import (
+    CRED,
+    EfGroupedGachaRecord,
+    EndfieldPoolType,
+    OperatorRoster,
+    OperatorRosterQuery,
+    RogueData,
+)
 from .schemas.endfield.gacha.base import EfGachaContentPool
 from .store import SklandStore
 
@@ -43,10 +51,16 @@ class SklandService:
         else:
             raise ValueError("token 应为 24 位，cred 应为 32 位")
         await self.store.save_account(account)
+        await ark_card_cache.invalidate_owner(owner_id)
         return await self.sync_characters(owner_id)
 
     async def bind_scan_token(self, owner_id: str, token: str) -> list[Character]:
         return await self.bind(owner_id, token)
+
+    async def unbind(self, owner_id: str) -> bool:
+        deleted = await self.store.delete_account(owner_id)
+        await ark_card_cache.invalidate_owner(owner_id)
+        return deleted
 
     async def require_account(self, owner_id: str) -> Account:
         account = await self.store.get_account(owner_id)
@@ -86,6 +100,7 @@ class SklandService:
                         )
                     )
         await self.store.replace_characters(owner_id, chars)
+        await ark_card_cache.invalidate_owner(owner_id)
         return chars
 
     async def require_character(
@@ -104,8 +119,12 @@ class SklandService:
         account = await self.require_account(owner_id)
         char = await self.require_character(owner_id, game, identity)
         if game == ARKNIGHTS:
-            card = await self._with_refresh(
-                account, lambda cred: SklandAPI.ark_card(cred, char.uid)
+            card = await ark_card_cache.get(
+                owner_id,
+                char.uid,
+                lambda: self._with_refresh(
+                    account, lambda cred: SklandAPI.ark_card(cred, char.uid)
+                ),
             )
         else:
             card = await self._with_refresh(
@@ -113,6 +132,27 @@ class SklandService:
                 lambda cred: SklandAPI.endfield_card(cred, account.user_id or "", char),
             )
         return char, card
+
+    async def operator_roster(
+        self,
+        owner_id: str,
+        *,
+        filters: tuple[str, ...] = (),
+        options: dict[str, str] | None = None,
+    ) -> OperatorRoster:
+        if not game_data.operator_catalog.entries:
+            await game_data.load()
+        _, card = await self.card(owner_id, ARKNIGHTS)
+        query = OperatorRosterQuery.from_input(
+            game_data.operator_catalog, filters=filters, **(options or {})
+        )
+        return OperatorRoster.build(
+            status=card.status,
+            catalog=game_data.operator_catalog,
+            characters=card.chars,
+            query=query,
+            equipment_map=card.equipmentInfoMap,
+        )
 
     async def sign(
         self,

@@ -57,5 +57,55 @@
     "description": "终末地抽卡单图各分类最大卡池数",
     "type": "int",
     "default": 5
+  },
+  "render_timeout": {
+    "description": "全局图片渲染超时（毫秒）",
+    "type": "int",
+    "default": 180000
+  },
+  "ark_portrait_cache_enabled": {
+    "description": "缓存明日方舟干员立绘",
+    "type": "bool",
+    "default": false
+  },
+  "ark_card_cache_ttl": {
+    "description": "明日方舟角色数据缓存时间（秒）",
+    "type": "int",
+    "default": 120
+  },
+  "ark_card_cache_max_entries": {
+    "description": "明日方舟角色数据最大缓存条目",
+    "type": "int",
+    "default": 64
+  },
+  "roster_render_max": {
+    "description": "方舟干员 Box 单图最大干员数",
+    "type": "int",
+    "default": 16
+  },
+  "roster_render_format": {
+    "description": "方舟干员 Box 图片格式（jpeg/png）",
+    "type": "string",
+    "default": "jpeg"
+  },
+  "roster_jpeg_quality": {
+    "description": "方舟干员 Box JPEG 质量",
+    "type": "int",
+    "default": 90
+  },
+  "qq_image_max_bytes": {
+    "description": "QQ 官方平台单张图片压缩目标字节数",
+    "type": "int",
+    "default": 4194304
+  },
+  "qq_image_max_side": {
+    "description": "QQ 官方平台图片最长边像素",
+    "type": "int",
+    "default": 4096
+  },
+  "qq_image_jpeg_quality": {
+    "description": "QQ 官方平台大图初始 JPEG 质量",
+    "type": "int",
+    "default": 88
   }
 }
