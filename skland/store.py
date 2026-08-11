@@ -7,6 +7,16 @@ import aiosqlite
 from .models import Account, Character, GachaRecord
 
 
+_LEGACY_CHARACTERS_PRIMARY_KEY = ("owner_id", "uid", "role_id", "app_code")
+_CHARACTERS_PRIMARY_KEY = (
+    "owner_id",
+    "uid",
+    "role_id",
+    "app_code",
+    "channel_master_id",
+)
+
+
 class SklandStore:
     """SQLite repository for accounts, characters, records and reply state."""
 
@@ -34,7 +44,9 @@ class SklandStore:
                     channel_master_id TEXT NOT NULL,
                     nickname TEXT NOT NULL,
                     is_default INTEGER NOT NULL DEFAULT 0,
-                    PRIMARY KEY (owner_id, uid, role_id, app_code)
+                    PRIMARY KEY (
+                        owner_id, uid, role_id, app_code, channel_master_id
+                    )
                 );
                 CREATE TABLE IF NOT EXISTS sign_results (
                     game TEXT NOT NULL,
@@ -70,6 +82,61 @@ class SklandStore:
                 """
             )
             await db.commit()
+            await self._migrate_characters_primary_key(db)
+
+    @staticmethod
+    async def _migrate_characters_primary_key(db: aiosqlite.Connection) -> None:
+        """Add server identity to legacy character keys without losing rows."""
+        rows = await (await db.execute("PRAGMA table_info(characters)")).fetchall()
+        primary_key = tuple(
+            row[1]
+            for row in sorted(
+                (row for row in rows if row[5] > 0),
+                key=lambda row: row[5],
+            )
+        )
+        if primary_key == _CHARACTERS_PRIMARY_KEY:
+            return
+        if primary_key != _LEGACY_CHARACTERS_PRIMARY_KEY:
+            raise RuntimeError(f"不支持的 characters 主键结构：{primary_key!r}")
+
+        await db.commit()
+        await db.execute("BEGIN IMMEDIATE")
+        try:
+            await db.execute(
+                """
+                CREATE TABLE characters__new (
+                    owner_id TEXT NOT NULL,
+                    uid TEXT NOT NULL,
+                    role_id TEXT NOT NULL DEFAULT '',
+                    app_code TEXT NOT NULL,
+                    channel_master_id TEXT NOT NULL,
+                    nickname TEXT NOT NULL,
+                    is_default INTEGER NOT NULL DEFAULT 0,
+                    PRIMARY KEY (
+                        owner_id, uid, role_id, app_code, channel_master_id
+                    )
+                )
+                """
+            )
+            await db.execute(
+                """
+                INSERT INTO characters__new (
+                    owner_id, uid, role_id, app_code,
+                    channel_master_id, nickname, is_default
+                )
+                SELECT
+                    owner_id, uid, role_id, app_code,
+                    channel_master_id, nickname, is_default
+                FROM characters
+                """
+            )
+            await db.execute("DROP TABLE characters")
+            await db.execute("ALTER TABLE characters__new RENAME TO characters")
+            await db.commit()
+        except BaseException:
+            await db.rollback()
+            raise
 
     async def save_account(self, account: Account) -> None:
         async with aiosqlite.connect(self.path) as db:

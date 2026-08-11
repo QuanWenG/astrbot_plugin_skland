@@ -28,6 +28,7 @@ class GameDataRepository:
     DETAILS = "https://weedy.prts.wiki/gacha_table.json"
     PRTS_API = "https://prts.wiki/api.php"
     EF_POOLS = "https://raw.githubusercontent.com/FrostN0v0/EndfieldGachaPoolTable/master/GachaPoolTable.json"
+    CHAR_META_FILE = "gamedata/excel/char_meta_table.json"
     FILES = (
         "gamedata/excel/gacha_table.json",
         "gamedata/excel/character_table.json",
@@ -36,12 +37,15 @@ class GameDataRepository:
         "gamedata/excel/handbook_info_table.json",
         "gamedata/excel/handbook_team_table.json",
     )
+    SYNC_FILES = FILES + (CHAR_META_FILE,)
 
     def __init__(self) -> None:
         self.gacha_table: list[GachaTable] = []
         self.gacha_details: list[GachaDetails] = []
         self.character_table: list[CharTable] = []
         self.operator_catalog = OperatorCatalog()
+        self.variant_groups_loaded = False
+        self.variant_groups_checked = False
         self.ef_pool_table: dict[str, Any] = {}
 
     @staticmethod
@@ -61,14 +65,21 @@ class GameDataRepository:
                 version_response = await client.get(self.proxy(self.VERSION))
                 version_response.raise_for_status()
                 remote = version_response.text.strip()
-                missing = any(not (root / route).exists() for route in self.FILES)
+                missing = any(
+                    not (root / route).exists() for route in self.SYNC_FILES
+                ) or not self.variant_groups_loaded
                 if force or missing or local != remote:
-                    for route in self.FILES:
+                    for route in self.SYNC_FILES:
                         response = await client.get(self.proxy(self.RAW + route))
                         response.raise_for_status()
                         target = root / route
                         target.parent.mkdir(parents=True, exist_ok=True)
-                        target.write_bytes(response.content)
+                        temporary = target.with_suffix(target.suffix + ".tmp")
+                        try:
+                            temporary.write_bytes(response.content)
+                            os.replace(temporary, target)
+                        finally:
+                            temporary.unlink(missing_ok=True)
                         downloaded += 1
                     version_file.write_text(remote, "utf-8")
                 await self._optional(client, root)
@@ -87,6 +98,7 @@ class GameDataRepository:
             except RequestException as exc:
                 logger.warning("干员筛选元数据更新失败，使用官方档案回退：%s", exc)
         self._parse(metadata)
+        self.variant_groups_checked = self.variant_groups_loaded
         return local, downloaded, failed
 
     async def _optional(self, client: httpx.AsyncClient, root) -> None:
@@ -106,15 +118,46 @@ class GameDataRepository:
         if not all((paths.DATA_DIR / route).exists() for route in self.FILES):
             return False
         self._parse(self._load_operator_metadata())
+        self.variant_groups_checked = self.variant_groups_loaded
         return True
+
+    @staticmethod
+    def _valid_variant_table(value: Any) -> bool:
+        if not isinstance(value, dict):
+            return False
+        groups = value.get("spCharGroups")
+        if not isinstance(groups, dict) or not groups:
+            return False
+        return all(
+            isinstance(group_id, str)
+            and bool(group_id)
+            and isinstance(member_ids, list)
+            and bool(member_ids)
+            and all(isinstance(member_id, str) and member_id for member_id in member_ids)
+            for group_id, member_ids in groups.items()
+        )
+
+    @classmethod
+    def _load_tables(cls, root: Any) -> dict[str, Any]:
+        tables = {
+            route.rsplit("/", 1)[-1]: json.loads((root / route).read_text("utf-8"))
+            for route in cls.FILES
+        }
+        optional = root / cls.CHAR_META_FILE
+        if optional.exists():
+            try:
+                variant_table = json.loads(optional.read_text("utf-8"))
+                if not cls._valid_variant_table(variant_table):
+                    raise ValueError("spCharGroups 结构不完整")
+                tables[optional.name] = variant_table
+            except (OSError, ValueError) as exc:
+                logger.warning("异格分组缓存无效，已忽略：%s", exc)
+        return tables
 
     def _parse(self, metadata: OperatorMetadataSnapshot | None = None) -> None:
         try:
             root = paths.DATA_DIR
-            tables = {
-                route.rsplit("/", 1)[-1]: json.loads((root / route).read_text("utf-8"))
-                for route in self.FILES
-            }
+            tables = self._load_tables(root)
             chars = tables["character_table.json"]
             self.character_table = []
             for char_id, value in chars.items():
@@ -141,6 +184,10 @@ class GameDataRepository:
                 tables["handbook_info_table.json"],
                 tables["handbook_team_table.json"],
                 metadata,
+                tables.get("char_meta_table.json"),
+            )
+            self.variant_groups_loaded = bool(self.operator_catalog.entries) and all(
+                entry.variant_group_id for entry in self.operator_catalog.entries
             )
         except (OSError, ValueError, KeyError) as exc:
             raise RequestException(f"游戏数据解析失败：{exc}") from exc
@@ -193,10 +240,7 @@ class GameDataRepository:
             raise RequestException("获取 PRTS 干员筛选元数据失败：返回数据为空")
         snapshot = OperatorMetadataSnapshot.from_prts_rows(rows)
         root = paths.DATA_DIR
-        tables = {
-            route.rsplit("/", 1)[-1]: json.loads((root / route).read_text("utf-8"))
-            for route in self.FILES
-        }
+        tables = self._load_tables(root)
         catalog = OperatorCatalog.from_game_tables(
             tables["character_table.json"],
             tables["char_patch_table.json"],
@@ -204,6 +248,7 @@ class GameDataRepository:
             tables["handbook_info_table.json"],
             tables["handbook_team_table.json"],
             snapshot,
+            tables.get("char_meta_table.json"),
         )
         official_ids = {entry.char_id for entry in catalog.entries}
         matched = len(official_ids.intersection(snapshot.by_id))

@@ -156,6 +156,7 @@ class OperatorCatalogModule(BaseModel):
 
 class OperatorCatalogEntry(BaseModel):
     char_id: str
+    variant_group_id: str = ""
     name: str
     appellation: str
     profession: str
@@ -228,6 +229,7 @@ class OperatorCatalog(BaseModel):
         handbook_info_table: dict[str, Any],
         handbook_team_table: dict[str, dict[str, Any]],
         metadata_snapshot: OperatorMetadataSnapshot | None = None,
+        char_meta_table: dict[str, Any] | None = None,
     ) -> "OperatorCatalog":
         characters = {
             char_id: data
@@ -236,6 +238,16 @@ class OperatorCatalog(BaseModel):
         }
         patch_characters = char_patch_table.get("patchChars") or {}
         characters.update(patch_characters)
+
+        variant_group_by_id: dict[str, str] = {}
+        for group_id, member_ids in (
+            (char_meta_table or {}).get("spCharGroups") or {}
+        ).items():
+            if not isinstance(member_ids, list):
+                continue
+            for member_id in member_ids:
+                if isinstance(member_id, str) and member_id:
+                    variant_group_by_id[member_id] = str(group_id)
 
         handbook_dict = handbook_info_table.get("handbookDict") or {}
         release_order = {char_id: index for index, char_id in enumerate(handbook_dict)}
@@ -309,6 +321,10 @@ class OperatorCatalog(BaseModel):
             entries.append(
                 OperatorCatalogEntry(
                     char_id=char_id,
+                    variant_group_id=variant_group_by_id.get(
+                        char_id,
+                        variant_group_by_id.get(base_id, ""),
+                    ),
                     name=data.get("name") or char_id,
                     appellation=data.get("appellation") or "",
                     profession=profession,

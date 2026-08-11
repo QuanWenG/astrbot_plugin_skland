@@ -29,6 +29,10 @@ ENDFIELD = "endfield"
 logger = logging.getLogger("astrbot")
 
 
+def _ark_card_cache_subject(character: Character) -> str:
+    return f"{character.channel_master_id}:{character.uid}"
+
+
 class SklandService:
     """Framework-independent application service for every command use case."""
 
@@ -121,7 +125,7 @@ class SklandService:
         if game == ARKNIGHTS:
             card = await ark_card_cache.get(
                 owner_id,
-                char.uid,
+                _ark_card_cache_subject(char),
                 lambda: self._with_refresh(
                     account, lambda cred: SklandAPI.ark_card(cred, char.uid)
                 ),
@@ -140,7 +144,10 @@ class SklandService:
         filters: tuple[str, ...] = (),
         options: dict[str, str] | None = None,
     ) -> OperatorRoster:
-        if not game_data.operator_catalog.entries:
+        if (
+            not game_data.operator_catalog.entries
+            or not getattr(game_data, "variant_groups_checked", True)
+        ):
             await game_data.load()
         _, card = await self.card(owner_id, ARKNIGHTS)
         query = OperatorRosterQuery.from_input(
@@ -153,6 +160,45 @@ class SklandService:
             query=query,
             equipment_map=card.equipmentInfoMap,
         )
+
+    async def operator_rosters(
+        self,
+        owner_id: str,
+    ) -> list[tuple[Character, OperatorRoster]]:
+        """Build a complete roster for every bound Arknights role."""
+        account = await self.require_account(owner_id)
+        roles = await self.store.get_characters(owner_id, ARKNIGHTS)
+        if not roles:
+            raise ValueError(f"未找到 {ARKNIGHTS} 角色，请先使用 角色更新")
+        if (
+            not game_data.operator_catalog.entries
+            or not getattr(game_data, "variant_groups_checked", True)
+        ):
+            await game_data.load()
+        query = OperatorRosterQuery.from_input(game_data.operator_catalog)
+        results: list[tuple[Character, OperatorRoster]] = []
+        for role in roles:
+            card = await ark_card_cache.get(
+                owner_id,
+                _ark_card_cache_subject(role),
+                lambda current=role: self._with_refresh(
+                    account,
+                    lambda cred: SklandAPI.ark_card(cred, current.uid),
+                ),
+            )
+            results.append(
+                (
+                    role,
+                    OperatorRoster.build(
+                        status=card.status,
+                        catalog=game_data.operator_catalog,
+                        characters=card.chars,
+                        query=query,
+                        equipment_map=card.equipmentInfoMap,
+                    ),
+                )
+            )
+        return results
 
     async def sign(
         self,

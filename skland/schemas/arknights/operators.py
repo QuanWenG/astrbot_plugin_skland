@@ -672,6 +672,10 @@ class OperatorCard(BaseModel):
         return self.entry.char_id
 
     @property
+    def variant_group_id(self) -> str:
+        return self.entry.variant_group_id
+
+    @property
     def name(self) -> str:
         return self.entry.name
 

@@ -123,7 +123,22 @@ class SklandPlugin(Star):
         """Export the default Arknights role as a credential-free snapshot."""
         role = await self.service.require_character(owner_id, ARKNIGHTS)
         roster = await self.service.operator_roster(owner_id)
-        return build_operator_snapshot(role, roster)
+        return build_operator_snapshot(
+            role,
+            roster,
+            variant_metadata_complete=game_data.variant_groups_loaded,
+        )
+
+    async def export_arknights_operator_snapshots(self, owner_id: str) -> list[dict]:
+        """Export every bound Arknights role as credential-free snapshots."""
+        return [
+            build_operator_snapshot(
+                role,
+                roster,
+                variant_metadata_complete=game_data.variant_groups_loaded,
+            )
+            for role, roster in await self.service.operator_rosters(owner_id)
+        ]
 
     @filter.command("skland", alias={"sk"})
     async def skland(self, event: AstrMessageEvent, args: GreedyStr):

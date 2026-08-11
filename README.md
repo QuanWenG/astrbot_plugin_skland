@@ -114,14 +114,18 @@ python tools/sync_upstream.py
 ## 插件联动接口
 
 插件实例公开异步只读门面
-`export_arknights_operator_snapshot(owner_id: str) -> dict`，返回默认明日方舟
-角色的 `schema_version=2` 已拥有干员快照。DTO 结构如下：
+`export_arknights_operator_snapshots(owner_id: str) -> list[dict]`，返回同一森空岛
+账号下全部已绑定明日方舟角色（包括官服和 B 服）的 `schema_version=2`
+已拥有干员快照。任一角色获取失败时接口整体失败，不返回部分结果。
+`export_arknights_operator_snapshot(owner_id: str) -> dict` 继续返回默认角色，供
+旧版调用方兼容。单个 DTO 结构如下：
 
 ```text
-schema_version, snapshot_at
+schema_version, snapshot_at, variant_metadata_complete
 role: uid, nickname, server_id, server_name
 operators[]:
-  char_id, name, rarity, profession, evolve_phase, level, potential_rank
+  char_id, variant_group_id?, name, rarity, profession, evolve_phase, level,
+  potential_rank
   modules[]: module_id, module_name, type_code, type_icon, level
   skills[]: skill_id, skill_index, mastery_level
 ```
@@ -130,6 +134,11 @@ operators[]:
 Delta 模组通过 `type_code` 区分（Delta 的原始代码为 `D`）。`skills` 按干员
 实际技能顺序导出，`skill_index` 从 1 开始，因此低星干员不会补齐三个技能，
 未来超过三个技能也不会被截断。`potential_rank` 保持森空岛 API 的 0–5。
+`variant_group_id` 来自官方 `char_meta_table.spCharGroups`，用于识别本体和异格；
+旧缓存没有该数据时字段省略，不根据干员名推断关系。
+`variant_metadata_complete` 只在该官方表结构有效、目录干员全部有分组，且
+本次导出没有实时新干员回退记录时才为 `true`，便于调用方区分正常单体
+分组与“离线/旧缓存尚未取得完整分组表”。
 
 DTO 只包含角色显示信息、区服和练度字段，不包含 token、cred 或完整账号对
 象。调用方应通过 AstrBot `get_registered_star()` 动态取得当前激活实例并校验

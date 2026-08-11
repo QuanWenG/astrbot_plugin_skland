@@ -1,3 +1,5 @@
+import sqlite3
+
 import pytest
 
 from skland.models import Account, Character, GachaRecord
@@ -19,6 +21,84 @@ async def test_account_and_characters_round_trip(tmp_path):
     chars = await store.get_characters(account.owner_id, "arknights")
     assert len(chars) == 1
     assert chars[0].nickname == "博士"
+
+
+@pytest.mark.asyncio
+async def test_same_uid_is_distinguished_by_server(tmp_path):
+    store = SklandStore(tmp_path / "skland.sqlite3")
+    await store.initialize()
+    owner_id = "platform:user"
+
+    await store.replace_characters(
+        owner_id,
+        [
+            Character(owner_id, "100", None, "arknights", "1", "官服博士", True),
+            Character(owner_id, "100", None, "arknights", "2", "B服博士"),
+        ],
+    )
+
+    chars = await store.get_characters(owner_id, "arknights")
+    assert [(char.channel_master_id, char.uid) for char in chars] == [
+        ("1", "100"),
+        ("2", "100"),
+    ]
+
+
+@pytest.mark.asyncio
+async def test_initialize_migrates_legacy_character_primary_key(tmp_path):
+    database_path = tmp_path / "legacy.sqlite3"
+    with sqlite3.connect(database_path) as db:
+        db.execute(
+            """
+            CREATE TABLE characters (
+                owner_id TEXT NOT NULL,
+                uid TEXT NOT NULL,
+                role_id TEXT NOT NULL DEFAULT '',
+                app_code TEXT NOT NULL,
+                channel_master_id TEXT NOT NULL,
+                nickname TEXT NOT NULL,
+                is_default INTEGER NOT NULL DEFAULT 0,
+                PRIMARY KEY (owner_id, uid, role_id, app_code)
+            )
+            """
+        )
+        db.execute(
+            """
+            INSERT INTO characters (
+                owner_id, uid, role_id, app_code,
+                channel_master_id, nickname, is_default
+            ) VALUES ('platform:user', '100', '', 'arknights', '1', '旧博士', 1)
+            """
+        )
+
+    store = SklandStore(database_path)
+    await store.initialize()
+    await store.initialize()
+
+    preserved = await store.get_characters("platform:user", "arknights")
+    assert [(char.nickname, char.channel_master_id) for char in preserved] == [
+        ("旧博士", "1")
+    ]
+    with sqlite3.connect(database_path) as db:
+        columns = db.execute("PRAGMA table_info(characters)").fetchall()
+    assert tuple(
+        row[1] for row in sorted((row for row in columns if row[5]), key=lambda row: row[5])
+    ) == (
+        "owner_id",
+        "uid",
+        "role_id",
+        "app_code",
+        "channel_master_id",
+    )
+
+    await store.replace_characters(
+        "platform:user",
+        [
+            Character("platform:user", "100", None, "arknights", "1", "官服", True),
+            Character("platform:user", "100", None, "arknights", "2", "B服"),
+        ],
+    )
+    assert len(await store.get_characters("platform:user", "arknights")) == 2
 
 
 @pytest.mark.asyncio

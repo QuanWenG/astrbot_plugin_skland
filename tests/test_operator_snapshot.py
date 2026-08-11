@@ -27,11 +27,13 @@ def _role() -> SimpleNamespace:
 def _snapshot_card(
     *,
     rarity: int = 5,
+    variant_group_id: str = "",
     modules: list[SimpleNamespace] | None = None,
     skills: list[SimpleNamespace] | None = None,
 ) -> SimpleNamespace:
     return SimpleNamespace(
         char_id="char_1",
+        variant_group_id=variant_group_id,
         name="风笛",
         rarity=rarity,
         profession="先锋",
@@ -47,6 +49,7 @@ def _snapshot_card(
 
 def test_builds_versioned_credential_free_snapshot() -> None:
     card = _snapshot_card(
+        variant_group_id="char_1",
         modules=[
             SimpleNamespace(
                 module_id="uniequip_1",
@@ -76,10 +79,12 @@ def test_builds_versioned_credential_free_snapshot() -> None:
         _role(),
         SimpleNamespace(cards=[card]),
         snapshot_at=datetime(2026, 8, 10, tzinfo=timezone.utc),
+        variant_metadata_complete=True,
     )
 
     assert snapshot["schema_version"] == 2
     assert snapshot["snapshot_at"] == "2026-08-10T00:00:00+00:00"
+    assert snapshot["variant_metadata_complete"] is True
     assert snapshot["role"] == {
         "uid": "123456",
         "nickname": "博士",
@@ -89,6 +94,7 @@ def test_builds_versioned_credential_free_snapshot() -> None:
     assert snapshot["operators"] == [
         {
             "char_id": "char_1",
+            "variant_group_id": "char_1",
             "name": "风笛",
             "rarity": 6,
             "profession": "先锋",
@@ -113,6 +119,16 @@ def test_builds_versioned_credential_free_snapshot() -> None:
     ]
     assert "cred" not in repr(snapshot).casefold()
     assert "must-not-leak" not in repr(snapshot)
+
+
+def test_snapshot_marks_fallback_variant_metadata_incomplete() -> None:
+    snapshot = build_operator_snapshot(
+        _role(),
+        SimpleNamespace(cards=[_snapshot_card()]),
+        variant_metadata_complete=True,
+    )
+
+    assert snapshot["variant_metadata_complete"] is False
 
 
 @pytest.mark.parametrize("skill_count", [1, 2, 4])
@@ -164,6 +180,17 @@ def test_snapshot_supports_more_than_three_modules_and_omits_locked_modules() ->
     ]
 
 
+def test_snapshot_exports_official_variant_group() -> None:
+    operator = build_operator_snapshot(
+        _role(),
+        SimpleNamespace(
+            cards=[_snapshot_card(variant_group_id="char_003_kalts")]
+        ),
+    )["operators"][0]
+
+    assert operator["variant_group_id"] == "char_003_kalts"
+
+
 def test_game_catalog_and_live_card_propagate_module_identity() -> None:
     catalog = OperatorCatalog.from_game_tables(
         character_table={
@@ -188,8 +215,10 @@ def test_game_catalog_and_live_card_propagate_module_identity() -> None:
         },
         handbook_info_table={"handbookDict": {}},
         handbook_team_table={},
+        char_meta_table={"spCharGroups": {"char_base": ["char_1", "char_2"]}},
     )
     entry = catalog.entries[0]
+    assert entry.variant_group_id == "char_base"
     assert entry.modules == (
         OperatorCatalogModule(
             id="uniequip_x",
@@ -231,6 +260,7 @@ def test_game_catalog_and_live_card_propagate_module_identity() -> None:
 
     card = OperatorCard.from_entry(entry, character, equipment_map)
 
+    assert card.variant_group_id == "char_base"
     assert [(module.module_id, module.name, module.type_code) for module in card.modules] == [
         ("uniequip_x", "账号返回的 X 模组", "X"),
         ("uniequip_future", "目录尚未收录的 Y 模组", "Y"),
@@ -241,6 +271,39 @@ def test_game_catalog_and_live_card_propagate_module_identity() -> None:
         ("sk_1", 3),
         ("sk_2", 0),
     ]
+
+
+def test_patch_form_inherits_base_variant_group() -> None:
+    base_data = {
+        "name": "阿米娅",
+        "appellation": "Amiya",
+        "profession": "CASTER",
+        "rarity": 4,
+        "skills": [],
+    }
+    patch_data = {
+        **base_data,
+        "name": "阿米娅",
+        "profession": "WARRIOR",
+    }
+    catalog = OperatorCatalog.from_game_tables(
+        character_table={"char_002_amiya": base_data},
+        char_patch_table={
+            "patchChars": {"char_1001_amiya2": patch_data},
+            "infos": {
+                "char_002_amiya": {"tmplIds": ["char_1001_amiya2"]}
+            },
+        },
+        uniequip_table={"charEquip": {}, "equipDict": {}},
+        handbook_info_table={"handbookDict": {}},
+        handbook_team_table={},
+        char_meta_table={
+            "spCharGroups": {"char_002_amiya": ["char_002_amiya"]}
+        },
+    )
+
+    assert catalog.by_id["char_002_amiya"].variant_group_id == "char_002_amiya"
+    assert catalog.by_id["char_1001_amiya2"].variant_group_id == "char_002_amiya"
 
 
 def test_operator_card_falls_back_to_live_equipment_when_catalog_is_missing() -> None:

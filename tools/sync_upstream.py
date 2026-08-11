@@ -98,6 +98,114 @@ def _apply_operator_snapshot_extensions(relative: str, source: str) -> str:
                 """
             ),
         )
+        source = _replace_once(
+            relative,
+            source,
+            dedent(
+                """\
+                class OperatorCatalogEntry(BaseModel):
+                    char_id: str
+                    name: str
+                """
+            ),
+            dedent(
+                """\
+                class OperatorCatalogEntry(BaseModel):
+                    char_id: str
+                    variant_group_id: str = ""
+                    name: str
+                """
+            ),
+        )
+        source = _replace_once(
+            relative,
+            source,
+            _at(
+                4,
+                """\
+                    def from_game_tables(
+                        cls,
+                        character_table: dict[str, dict[str, Any]],
+                        char_patch_table: dict[str, Any],
+                        uniequip_table: dict[str, Any],
+                        handbook_info_table: dict[str, Any],
+                        handbook_team_table: dict[str, dict[str, Any]],
+                        metadata_snapshot: OperatorMetadataSnapshot | None = None,
+                    ) -> "OperatorCatalog":
+                """,
+            ),
+            _at(
+                4,
+                """\
+                    def from_game_tables(
+                        cls,
+                        character_table: dict[str, dict[str, Any]],
+                        char_patch_table: dict[str, Any],
+                        uniequip_table: dict[str, Any],
+                        handbook_info_table: dict[str, Any],
+                        handbook_team_table: dict[str, dict[str, Any]],
+                        metadata_snapshot: OperatorMetadataSnapshot | None = None,
+                        char_meta_table: dict[str, Any] | None = None,
+                    ) -> "OperatorCatalog":
+                """,
+            ),
+        )
+        source = _replace_once(
+            relative,
+            source,
+            _at(
+                8,
+                """\
+                        patch_characters = char_patch_table.get("patchChars") or {}
+                        characters.update(patch_characters)
+
+                        handbook_dict = handbook_info_table.get("handbookDict") or {}
+                """,
+            ),
+            _at(
+                8,
+                """\
+                        patch_characters = char_patch_table.get("patchChars") or {}
+                        characters.update(patch_characters)
+
+                        variant_group_by_id: dict[str, str] = {}
+                        for group_id, member_ids in (
+                            (char_meta_table or {}).get("spCharGroups") or {}
+                        ).items():
+                            if not isinstance(member_ids, list):
+                                continue
+                            for member_id in member_ids:
+                                if isinstance(member_id, str) and member_id:
+                                    variant_group_by_id[member_id] = str(group_id)
+
+                        handbook_dict = handbook_info_table.get("handbookDict") or {}
+                """,
+            ),
+        )
+        source = _replace_once(
+            relative,
+            source,
+            _at(
+                16,
+                """\
+                                OperatorCatalogEntry(
+                                    char_id=char_id,
+                                    name=data.get("name") or char_id,
+                """,
+            ),
+            _at(
+                16,
+                """\
+                                OperatorCatalogEntry(
+                                    char_id=char_id,
+                                    variant_group_id=variant_group_by_id.get(
+                                        char_id,
+                                        variant_group_by_id.get(base_id, ""),
+                                    ),
+                                    name=data.get("name") or char_id,
+                """,
+            ),
+        )
         return source
 
     if relative != "schemas/arknights/operators.py":
@@ -269,6 +377,36 @@ def _apply_operator_snapshot_extensions(relative: str, source: str) -> str:
                                 equipment=equipment,
                                 selected=not equipment.locked and character.defaultEquipId == equipment.id,
             """
+        ),
+    )
+    source = _replace_once(
+        relative,
+        source,
+        _at(
+            4,
+            """\
+                @property
+                def char_id(self) -> str:
+                    return self.entry.char_id
+
+                @property
+                def name(self) -> str:
+            """,
+        ),
+        _at(
+            4,
+            """\
+                @property
+                def char_id(self) -> str:
+                    return self.entry.char_id
+
+                @property
+                def variant_group_id(self) -> str:
+                    return self.entry.variant_group_id
+
+                @property
+                def name(self) -> str:
+            """,
         ),
     )
     return source
