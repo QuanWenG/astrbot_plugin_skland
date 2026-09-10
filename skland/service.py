@@ -33,11 +33,49 @@ def _ark_card_cache_subject(character: Character) -> str:
     return f"{character.channel_master_id}:{character.uid}"
 
 
+def _catalog_gaps(characters: list[Character]) -> list[str]:
+    catalog = getattr(game_data.operator_catalog, "by_id", {})
+    return sorted(
+        {
+            char_id
+            for character in characters
+            if (char_id := str(character.charId).strip())
+            and (
+                (entry := catalog.get(char_id)) is None
+                or not str(getattr(entry, "profession", "")).strip()
+            )
+        }
+    )
+
+
 class SklandService:
     """Framework-independent application service for every command use case."""
 
     def __init__(self, store: SklandStore) -> None:
         self.store = store
+
+    async def _ensure_operator_catalog(self, characters: list[Character]) -> None:
+        if (
+            not game_data.operator_catalog.entries
+            or not getattr(game_data, "variant_groups_checked", True)
+        ):
+            await game_data.load()
+
+        gaps = _catalog_gaps(characters)
+        if not gaps:
+            return
+
+        logger.warning(
+            "森空岛返回了本地干员目录缺少的干员，强制刷新游戏数据：%s",
+            ", ".join(gaps),
+        )
+        await game_data.load(force=True)
+        gaps = _catalog_gaps(characters)
+        if gaps:
+            raise RequestException(
+                "游戏数据目录仍缺少账号中的干员职业信息："
+                f"{', '.join(gaps)}。请执行“资源更新 --data --force”后重试。"
+            )
 
     async def bind(self, owner_id: str, secret: str) -> list[Character]:
         secret = secret.strip()
@@ -144,12 +182,8 @@ class SklandService:
         filters: tuple[str, ...] = (),
         options: dict[str, str] | None = None,
     ) -> OperatorRoster:
-        if (
-            not game_data.operator_catalog.entries
-            or not getattr(game_data, "variant_groups_checked", True)
-        ):
-            await game_data.load()
         _, card = await self.card(owner_id, ARKNIGHTS)
+        await self._ensure_operator_catalog(card.chars)
         query = OperatorRosterQuery.from_input(
             game_data.operator_catalog, filters=filters, **(options or {})
         )
@@ -170,13 +204,8 @@ class SklandService:
         roles = await self.store.get_characters(owner_id, ARKNIGHTS)
         if not roles:
             raise ValueError(f"未找到 {ARKNIGHTS} 角色，请先使用 角色更新")
-        if (
-            not game_data.operator_catalog.entries
-            or not getattr(game_data, "variant_groups_checked", True)
-        ):
-            await game_data.load()
-        query = OperatorRosterQuery.from_input(game_data.operator_catalog)
-        results: list[tuple[Character, OperatorRoster]] = []
+        role_cards: list[tuple[Character, Any]] = []
+        all_characters: list[Any] = []
         for role in roles:
             card = await ark_card_cache.get(
                 owner_id,
@@ -186,19 +215,24 @@ class SklandService:
                     lambda cred: SklandAPI.ark_card(cred, current.uid),
                 ),
             )
-            results.append(
-                (
-                    role,
-                    OperatorRoster.build(
-                        status=card.status,
-                        catalog=game_data.operator_catalog,
-                        characters=card.chars,
-                        query=query,
-                        equipment_map=card.equipmentInfoMap,
-                    ),
-                )
+            role_cards.append((role, card))
+            all_characters.extend(card.chars)
+
+        await self._ensure_operator_catalog(all_characters)
+        query = OperatorRosterQuery.from_input(game_data.operator_catalog)
+        return [
+            (
+                role,
+                OperatorRoster.build(
+                    status=card.status,
+                    catalog=game_data.operator_catalog,
+                    characters=card.chars,
+                    query=query,
+                    equipment_map=card.equipmentInfoMap,
+                ),
             )
-        return results
+            for role, card in role_cards
+        ]
 
     async def sign(
         self,

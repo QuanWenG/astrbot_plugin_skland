@@ -27,6 +27,7 @@ def _role() -> SimpleNamespace:
 def _snapshot_card(
     *,
     rarity: int = 5,
+    profession: str = "先锋",
     variant_group_id: str = "",
     modules: list[SimpleNamespace] | None = None,
     skills: list[SimpleNamespace] | None = None,
@@ -36,7 +37,7 @@ def _snapshot_card(
         variant_group_id=variant_group_id,
         name="风笛",
         rarity=rarity,
-        profession="先锋",
+        profession=profession,
         character=SimpleNamespace(
             evolvePhase=2,
             level=90,
@@ -129,6 +130,14 @@ def test_snapshot_marks_fallback_variant_metadata_incomplete() -> None:
     )
 
     assert snapshot["variant_metadata_complete"] is False
+
+
+def test_snapshot_rejects_empty_catalog_profession() -> None:
+    with pytest.raises(ValueError, match=r"干员 char_1 的职业数据为空"):
+        build_operator_snapshot(
+            _role(),
+            SimpleNamespace(cards=[_snapshot_card(profession="")]),
+        )
 
 
 @pytest.mark.parametrize("skill_count", [1, 2, 4])

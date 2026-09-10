@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock, call
 import pytest
 
 import skland.service as service_module
+from skland.exception import RequestException
 from skland.models import Character
 from skland.service import ARKNIGHTS, SklandService
 
@@ -76,3 +77,55 @@ async def test_operator_rosters_fetches_every_bound_arknights_role(
         call("bot:user", "1:shared-uid", get_card.await_args_list[0].args[2]),
         call("bot:user", "2:shared-uid", get_card.await_args_list[1].args[2]),
     ]
+
+
+@pytest.mark.asyncio
+async def test_live_operator_missing_from_catalog_triggers_forced_refresh(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    initial_catalog = SimpleNamespace(entries=[object()], by_id={})
+    refreshed_catalog = SimpleNamespace(
+        entries=[object()],
+        by_id={"char_future": SimpleNamespace(profession="近卫")},
+    )
+    monkeypatch.setattr(service_module.game_data, "operator_catalog", initial_catalog)
+    monkeypatch.setattr(service_module.game_data, "variant_groups_checked", True)
+    load_game_data = AsyncMock()
+
+    async def refresh(*, force: bool = False) -> None:
+        assert force is True
+        monkeypatch.setattr(
+            service_module.game_data, "operator_catalog", refreshed_catalog
+        )
+
+    load_game_data.side_effect = refresh
+    monkeypatch.setattr(service_module.game_data, "load", load_game_data)
+
+    service = SklandService(SimpleNamespace())
+    await service._ensure_operator_catalog(
+        [SimpleNamespace(charId="char_future")]
+    )
+
+    load_game_data.assert_awaited_once_with(force=True)
+
+
+@pytest.mark.asyncio
+async def test_live_operator_still_missing_after_refresh_is_rejected(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        service_module.game_data,
+        "operator_catalog",
+        SimpleNamespace(entries=[object()], by_id={}),
+    )
+    monkeypatch.setattr(service_module.game_data, "variant_groups_checked", True)
+    load_game_data = AsyncMock()
+    monkeypatch.setattr(service_module.game_data, "load", load_game_data)
+
+    service = SklandService(SimpleNamespace())
+    with pytest.raises(RequestException, match="char_missing"):
+        await service._ensure_operator_catalog(
+            [SimpleNamespace(charId="char_missing")]
+        )
+
+    load_game_data.assert_awaited_once_with(force=True)

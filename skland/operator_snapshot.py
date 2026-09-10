@@ -21,12 +21,17 @@ def build_operator_snapshot(
         character = card.character
         if character is None:
             continue
+        profession = getattr(card, "profession", None)
+        if not isinstance(profession, str) or not profession.strip():
+            raise ValueError(
+                f"干员 {getattr(card, 'char_id', '')} 的职业数据为空，无法导出森空岛快照。"
+            )
         operator = {
             "char_id": card.char_id,
             "name": card.name,
             # Game data stores rarity as a zero-based value.
             "rarity": card.rarity + 1,
-            "profession": card.profession,
+            "profession": profession.strip(),
             "evolve_phase": character.evolvePhase,
             "level": character.level,
             "modules": [
