@@ -109,12 +109,13 @@ class LocalHtmlRenderer:
         quality: int | None = None,
         screenshot_timeout: float | None = None,
         readiness: str = "networkidle",
+        pagination: dict[str, int] | None = None,
         **_: Any,
-    ) -> bytes:
+    ) -> bytes | list[bytes]:
         started = monotonic()
         await self.start()
         root = Path(template_path).resolve()
-        env = Environment(loader=FileSystemLoader(root), autoescape=False)
+        env = Environment(loader=FileSystemLoader(root), autoescape=True)
         if filters:
             env.filters.update(filters)
         if config.ark_portrait_cache_enabled:
@@ -141,6 +142,13 @@ class LocalHtmlRenderer:
             device_scale_factor=device_scale_factor,
         )
         page = await context.new_page()
+        if template_name in {"ef_gacha.html.jinja2", "ef_war_echoes.html.jinja2"}:
+            # A remote avatar is decorative; preserve layout and statistics when it fails.
+            import json
+            fallback = (root.parent / "images/endfield/war_echoes/operator_empty.png").as_uri()
+            await page.add_init_script("document.addEventListener('error', event => { const image = event.target; "
+                "if (image instanceof HTMLImageElement && /^https?:/.test(image.src)) "
+                f"image.src = {json.dumps(fallback)}; }}, true);")
         cache_tasks: list[asyncio.Task[None]] = []
         pending_by_url = dict(pending_images)
 
@@ -182,9 +190,16 @@ class LocalHtmlRenderer:
                 with suppress(Exception):
                     await page.wait_for_load_state("networkidle", timeout=timeout)
             await page.wait_for_timeout(wait or 300)
-            screenshot = await page.screenshot(
-                type=type, full_page=True, quality=quality, timeout=timeout
-            )
+            if pagination:
+                count = await page.evaluate("options => window.paginateEndfieldGacha(options)", pagination)
+                await asyncio.wait_for(page.evaluate("""async () => {
+                    await document.fonts.ready;
+                    await Promise.all(Array.from(document.images, image => image.decode().catch(() => {})));
+                }"""), timeout=timeout / 1000)
+                elements = page.locator("#ef-pages > .ef-page")
+                screenshot = [await elements.nth(i).screenshot(type=type, quality=quality, timeout=timeout) for i in range(count)]
+            else:
+                screenshot = await page.screenshot(type=type, full_page=True, quality=quality, timeout=timeout)
             if cache_tasks:
                 await asyncio.gather(*cache_tasks, return_exceptions=True)
             logger.info(

@@ -7,13 +7,24 @@ entrypoints, persistence, permissions and services are intentionally excluded.
 from __future__ import annotations
 
 import argparse
+import os
+import re
 import subprocess
 from textwrap import dedent, indent
 from pathlib import Path
 
-UPSTREAM_COMMIT = "0ac997a"
+UPSTREAM_COMMIT = "a33bf84199f2511ed0716fa4eb80cf89dbce9f45"
 TEXT_FILES = (
     "filters.py",
+    "schemas/arknights/operator_query.py",
+    "schemas/binding.py",
+    "schemas/endfield/war_echoes.py",
+    "schemas/endfield/gacha/view.py",
+    "resources/templates/bound_roles.html.jinja2",
+    "resources/templates/ef_gacha.html.jinja2",
+    "resources/templates/ef_gacha_macros.html.jinja2",
+    "resources/templates/ef_gacha.js",
+    "resources/templates/ef_war_echoes.html.jinja2",
     "schemas/arknights/game_data.py",
     "schemas/arknights/operators.py",
     "schemas/arknights/models/chars.py",
@@ -26,6 +37,39 @@ TEXT_FILES = (
 BINARY_FILES = (
     "resources/images/ark_card/confidential_mini.png",
     "resources/images/ark_card/raft_dec_text_01.png",
+    "resources/images/endfield/potential/potential_0.png",
+    "resources/images/endfield/potential/potential_1.png",
+    "resources/images/endfield/potential/potential_2.png",
+    "resources/images/endfield/potential/potential_3.png",
+    "resources/images/endfield/potential/potential_4.png",
+    "resources/images/endfield/potential/potential_5.png",
+    "resources/images/endfield/war_echoes/content.png",
+    "resources/images/endfield/war_echoes/dungeon.png",
+    "resources/images/endfield/war_echoes/dungeon_empty.png",
+    "resources/images/endfield/war_echoes/honor_bronze.png",
+    "resources/images/endfield/war_echoes/honor_gold.png",
+    "resources/images/endfield/war_echoes/honor_silver.png",
+    "resources/images/endfield/war_echoes/operator_empty.png",
+    "resources/images/endfield/war_echoes/rating_a.png",
+    "resources/images/endfield/war_echoes/rating_b.png",
+    "resources/images/endfield/war_echoes/rating_c.png",
+    "resources/images/endfield/war_echoes/rating_d.png",
+    "resources/images/endfield/war_echoes/rating_empty.png",
+    "resources/images/endfield/war_echoes/rating_s.png",
+    "resources/images/endfield/war_echoes/rating_s_plus.png",
+    "resources/images/endfield/war_echoes/season_switch.png",
+    "resources/images/endfield/war_echoes/stage_0.png",
+    "resources/images/endfield/war_echoes/stage_1.png",
+    "resources/images/endfield/war_echoes/stage_2.png",
+    "resources/images/endfield/war_echoes/stage_3.png",
+    "resources/images/endfield/war_echoes/stage_plus.png",
+    "resources/images/endfield/war_echoes/summary_honor.png",
+    "resources/images/endfield/war_echoes/summary_rating.png",
+    "resources/images/endfield/war_echoes/time.png",
+    "resources/images/endfield/war_echoes/title_rule.png",
+    "resources/images/endfield/war_echoes/week_1.png",
+    "resources/images/endfield/war_echoes/week_2.png",
+    "resources/images/endfield/war_echoes/week_3.png",
 )
 FORBIDDEN_IMPORTS = (
     "from nonebot ",
@@ -413,14 +457,16 @@ def _apply_operator_snapshot_extensions(relative: str, source: str) -> str:
 
 
 def normalize(relative: str, source: str) -> str:
-    if relative in {
-        "schemas/arknights/game_data.py",
-        "schemas/arknights/operators.py",
-    }:
-        source = source.replace(
-            "from nonebot.compat import model_validator",
-            "from pydantic import model_validator",
-        )
+    if relative == "resources/templates/gacha.html.jinja2":
+        source = source.replace("'B服'}}</span>", "('B服' if channel_master_id == '2' else '未知区服（' ~ channel_master_id ~ '）')}}</span>")
+    if relative == "resources/templates/ef_war_echoes.html.jinja2":
+        source = source.replace("{{ view.season.kvImage }}", "{{ view.season.kvImage or ('content.png' | war_echoes_asset) }}")
+        source = source.replace("          </article>\n          {% endfor %}", "          </article>\n          {% else %}\n          <p class=\"rounded-[4px] bg-black/30 p-4 text-center text-sm text-white/70\">本轮暂无战争回响战绩</p>\n          {% endfor %}")
+    if relative == "schemas/arknights/operators.py":
+        source = "import re\n\n" + source
+        source = source.replace("from . import operator_query", "from . import operator_query\nfrom .operator_query import OperatorOwnership, OperatorRosterQuery, OperatorSort")
+    source = re.sub(r'(@model_validator\(mode="after"\)\n)    @classmethod\n    def (\w+)\(cls, values: Any\)', r'\1    def \2(values: Any)', source)
+    source = source.replace("from nonebot.compat import model_validator", "from pydantic import model_validator")
     if relative == "filters.py":
         source = source.replace("import json\n", "import json\nimport logging\n", 1)
         source = source.replace(
@@ -434,28 +480,47 @@ def normalize(relative: str, source: str) -> str:
             "\n",
             1,
         )
-    return _apply_operator_snapshot_extensions(relative, source)
+    if relative == "filters.py":
+        source = source.replace("CACHE_DIR = paths.CACHE_DIR\n", "")
+        source = source.replace("CACHE_DIR /", "paths.CACHE_DIR /")
+    source = _apply_operator_snapshot_extensions(relative, source)
+    source = re.sub(
+        r'(@model_validator\(mode="after"\)\n)    @classmethod\n    def (\w+)\(cls, (\w+): "(\w+)"\) -> "\4":',
+        r'\1    def \2(\3) -> "\4":', source,
+    )
+    return source
 
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--upstream",
-        type=Path,
-        default=Path(__file__).resolve().parents[2]
-        / "nonebot-plugin-skland"
-        / "nonebot_plugin_skland",
-    )
+    parser.add_argument("--upstream", type=Path, default=Path(os.environ["SKLAND_UPSTREAM"]) if os.environ.get("SKLAND_UPSTREAM") else None,
+        help="上游仓库根目录或 nonebot_plugin_skland 包目录，也可通过 SKLAND_UPSTREAM 指定")
     parser.add_argument("--check", action="store_true")
+    parser.add_argument("--record-review", action="store_true", help="人工审阅结束后记录本地适配与资源哈希；不修改代码")
     args = parser.parse_args()
-    destination = Path(__file__).resolve().parents[1] / "skland"
+    if __package__:
+        from .upstream_audit import verify_review, record_review
+    else:
+        from upstream_audit import verify_review, record_review
+    project = Path(__file__).resolve().parents[1]
+    destination = project / "skland"
+    if args.check and args.record_review:
+        parser.error("--check 与 --record-review 不能同时使用")
+    if args.upstream is None:
+        if not args.check:
+            parser.error("写入或登记审阅必须显式指定 --upstream 或 SKLAND_UPSTREAM")
+        errors = verify_review(project)
+        print("\n".join(errors) if errors else "本地审阅清单检查通过；显式传入 --upstream 可同时校验上游源码")
+        return int(bool(errors))
     source_root = args.upstream.resolve()
+    if (source_root / "nonebot_plugin_skland").is_dir():
+        source_root = source_root / "nonebot_plugin_skland"
     if not source_root.is_dir():
         parser.error(f"upstream source not found: {source_root}")
 
     repo = source_root.parent
     commit = subprocess.run(
-        ["git", "rev-parse", "--short", "HEAD"],
+        ["git", "rev-parse", "HEAD"],
         cwd=repo,
         check=True,
         capture_output=True,
@@ -504,8 +569,8 @@ def main() -> int:
         if forbidden:
             raise SystemExit(f"forbidden framework import in {relative}: {forbidden}")
         target = destination / relative
-        if args.check:
-            if not target.exists() or target.read_text("utf-8") != source:
+        if args.check or args.record_review:
+            if not target.exists() or target.read_text("utf-8").rstrip() != source.rstrip():
                 drift.append(relative)
         else:
             target.parent.mkdir(parents=True, exist_ok=True)
@@ -514,7 +579,7 @@ def main() -> int:
     for relative in BINARY_FILES:
         payload = (source_root / relative).read_bytes()
         target = destination / relative
-        if args.check:
+        if args.check or args.record_review:
             if not target.exists() or target.read_bytes() != payload:
                 drift.append(relative)
         else:
@@ -525,6 +590,14 @@ def main() -> int:
         print("upstream drift detected:")
         print("\n".join(f"- {relative}" for relative in drift))
         return 1
+    if args.record_review:
+        result = record_review(project, source_root, set(TEXT_FILES) | set(BINARY_FILES))
+        print(f"已登记 {len(result['reviews'])} 项上游变化、{len(result['files'])} 个本地实现文件及全部静态资源")
+    elif args.check:
+        errors = verify_review(project, source_root)
+        if errors:
+            print("\n".join(errors))
+            return 1
     print("upstream portable core is synchronized")
     return 0
 

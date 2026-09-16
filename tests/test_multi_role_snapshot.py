@@ -21,7 +21,7 @@ async def test_operator_rosters_fetches_every_bound_arknights_role(
             app_code=ARKNIGHTS,
             channel_master_id="1",
             nickname="官服博士",
-            isdefault=True,
+            isdefault=True, account_id=1,
         ),
         Character(
             owner_id="bot:user",
@@ -29,7 +29,7 @@ async def test_operator_rosters_fetches_every_bound_arknights_role(
             role_id=None,
             app_code=ARKNIGHTS,
             channel_master_id="2",
-            nickname="B服博士",
+            nickname="B服博士", account_id=2,
         ),
     ]
     store = SimpleNamespace(get_characters=AsyncMock(return_value=roles))
@@ -71,11 +71,11 @@ async def test_operator_rosters_fetches_every_bound_arknights_role(
         (roles[1], "roster:bilibili"),
     ]
     store.get_characters.assert_awaited_once_with("bot:user", ARKNIGHTS)
-    service.require_account.assert_awaited_once_with("bot:user")
+    assert service.require_account.await_args_list == [call("bot:user", 1), call("bot:user", 2)]
     load_game_data.assert_awaited_once_with()
     assert get_card.await_args_list == [
-        call("bot:user", "1:shared-uid", get_card.await_args_list[0].args[2]),
-        call("bot:user", "2:shared-uid", get_card.await_args_list[1].args[2]),
+        call("bot:user", "1:arknights:1:shared-uid:shared-uid", get_card.await_args_list[0].args[2]),
+        call("bot:user", "2:arknights:2:shared-uid:shared-uid", get_card.await_args_list[1].args[2]),
     ]
 
 

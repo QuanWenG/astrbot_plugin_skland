@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from .commands import BOX_OPTIONS
 
 
 PAGE_MARKERS = frozenset({"页", "页码", "page", "范围"})
@@ -19,6 +20,12 @@ def parse_box_page_arguments(args: list[str]) -> BoxPageArguments:
     index = 0
     while index < len(args):
         token = args[index]
+        if token in BOX_OPTIONS:
+            if index + 1 >= len(args):
+                raise ValueError(f"参数 {token} 缺少值")
+            query_args.extend(args[index:index + 2])
+            index += 2
+            continue
         if token.casefold() in PAGE_MARKERS:
             if index + 1 >= len(args) or not args[index + 1].isdigit():
                 raise ValueError(f"{token} 后需要填写正整数页码")

@@ -1,4 +1,28 @@
 {
+  "auto_update_resources": {
+    "description": "启用每日数据更新",
+    "type": "bool",
+    "default": true,
+    "hint": "按服务器本地时区每日 09:00 更新游戏数据、卡池和干员筛选资料，结果仅写日志。图片资源仍由手动更新管理。"
+  },
+  "background_source": {
+    "description": "角色卡背景来源",
+    "type": "string",
+    "default": "default",
+    "hint": "支持 default、random、Lolicon、本地图片或目录、URL、data URI，以及 JSON 格式的 CustomSource（如 {\"uri\":\"backgrounds\"}）。相对路径基于插件数据目录。Box 在 default 下无背景。"
+  },
+  "rogue_background_source": {
+    "description": "肉鸽背景来源",
+    "type": "string",
+    "default": "rogue",
+    "hint": "rogue 使用主题背景；其余可用 default、random、Lolicon 或与角色卡相同的自定义路径。失败回退内置背景。"
+  },
+  "context_ttl": {
+    "description": "图片查询上下文有效期（秒）",
+    "type": "int",
+    "default": 300,
+    "hint": "用于回复图片查询背景、线索与战绩详情，按平台实例、会话和用户隔离。"
+  },
   "auto_sign": {
     "description": "启用每日自动签到",
     "type": "bool",
@@ -18,13 +42,13 @@
     "hint": "范围 0-59。"
   },
   "credential_group_whitelist": {
-    "description": "绑定指令群聊白名单",
+    "description": "旧登录白名单（仅首次迁移）",
     "type": "list",
     "items": {
       "type": "string"
     },
     "default": [],
-    "hint": "允许在这些群中使用绑定、扫码绑定和解绑。填写群 ID 或 /sid 返回的会话 ID；为空时仍仅限私聊。"
+    "hint": "兼容旧配置：首次升级自动迁移为已登记目标群，之后修改此项不再生效。新增群请在登记入口执行指令；管理员可用 /森空岛白名单 和 /森空岛撤销登记 管理。"
   },
   "browser_executable": {
     "description": "Chromium/Edge 可执行文件",
@@ -107,5 +131,14 @@
     "description": "QQ 官方平台大图初始 JPEG 质量",
     "type": "int",
     "default": 88
+  },
+  "credential_registration_groups": {
+    "description": "白名单登记入口群",
+    "type": "list",
+    "items": {
+      "type": "string"
+    },
+    "default": [],
+    "hint": "群友仅能在这些入口群发送 /森空岛登记 <目标群完整SID>，为目标群开通登录。支持入口群ID或 /sid 返回的会话ID；入口群自身不会自动获得登录权限。"
   }
 }

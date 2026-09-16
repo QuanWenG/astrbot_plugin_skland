@@ -72,7 +72,10 @@ def build_operator_snapshot(
             "uid": role.uid,
             "nickname": role.nickname,
             "server_id": role.channel_master_id,
-            "server_name": "官服" if role.channel_master_id == "1" else "B服",
+            "server_name": {"1": "官服", "2": "B服"}.get(
+                role.channel_master_id,
+                getattr(role, "server_name", "") or f"未知区服（{role.channel_master_id}）",
+            ),
         },
         "operators": operators,
     }

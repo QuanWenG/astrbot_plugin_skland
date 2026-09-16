@@ -1,0 +1,1287 @@
+{
+  "previous_commit": "0ac997a99d41e5d7fa36ae37e772ec919a210419",
+  "upstream_commit": "a33bf84199f2511ed0716fa4eb80cf89dbce9f45",
+  "files": {
+    "_conf_schema.json": "4d5af01eb33707e07d0f2e8724ea1ab87085bee721fdd19bd3b101636bf8b9ec",
+    "main.py": "6d589d04ff2963e11292b7e5ab2bdf058d1a8c5b2f9ea8c4c66ce9dd894d056d",
+    "metadata.yaml": "f3038f174b8a08f70042564973564a75d8f26d42c4375348f8a0ee57fde17381",
+    "skland/__init__.py": "d3beb5b4d475fc7079a703de441c753d50860cf744978a0994d0a2ab0c562f68",
+    "skland/access.py": "141a943cd4d60c6adf1969074c7864c3d702f86e6699263b0cd683fe7c1bfead",
+    "skland/api/__init__.py": "02430dc5d63491a002929985f5dd914d6c05b4ef56f787a2f88ad5d79c202605",
+    "skland/api/dId.py": "2f6fdd8a00cd88894c17527be91c27adf7618fa0bd7a37f308e2508ead01f88f",
+    "skland/api/login.py": "f5ea1cf8dd8d16dd9e505e656d3f873210300cde3908d3bbe88a7646ecf5adce",
+    "skland/api/request.py": "527ae932f0515bfbfeec0108f50e8ff5578b0f11d40fdb730fe863b1faf6fe02",
+    "skland/background.py": "bdc3629b31bc6b54b58d16031ee8611b511486b24c1f62ff2c8d8c6bbe33ed2b",
+    "skland/binding.py": "ccc59c9d52741f0ee939a994b8ab4d1667158de280d1cf8f39442cda406a9abb",
+    "skland/box_pagination.py": "65fc71578955235c6693676d905b5c9215f9f3e64e03bed2f85a191a121b6fc1",
+    "skland/card_cache.py": "d9089ca95a120e15d992eb663eb4c2297a0aa6456d6be43f4b09e5e7a9b575ac",
+    "skland/cards.py": "1ad104b1eb678c5836b1e9908fd48634212877cb57fbfb0a3b7e51f4b1c58142",
+    "skland/commands.py": "e47d00e0da49e809357003c2d8a142326ed19d40a71d6e5b9623d1f00ae721f6",
+    "skland/config.py": "817dfa4f474685508fab7c2e0e46c02c2ca2fb8e0cdab75b18913abedb286a86",
+    "skland/download.py": "b8d935a424e404a0408f84cdafafc8be75960e5b3642e7b5f6580440c63faa45",
+    "skland/exception.py": "e94570fd99a106d9d3c39c1de0462409a4c9a370c1062f30c70437f5c1148e65",
+    "skland/filters.py": "5a7a1166e34753a8bce969362db279f57ad2d9ab46b74e1bda13dcfdbf9b4228",
+    "skland/gacha.py": "77a6d841fee6402512c18734ae6d3f165d46215ac9dcbf89ee49159ee662e2bc",
+    "skland/image_cache.py": "75065a654f45caadace183f85f6f8843ce3917a800fceb90eb055638188a7530",
+    "skland/image_output.py": "7dc3a8a062f0148dea8beda399807b254ab83eff8daee85c0feb36346384a2f0",
+    "skland/interactions.py": "6b8d96b5b172aec059b538a2ec04d922fda906264757ef012d8252884454b52c",
+    "skland/models.py": "4a5a03fcaff284b66b3c3a6bc7e20e15f4226a17c7de0d3aa63ba562345aa7ab",
+    "skland/operator_snapshot.py": "2b538ccf7dbbc452935e78c56cc8c2cbbc40c6571376cf1e0a2451511d2a258c",
+    "skland/qq_message.py": "f54433825491d8c7c3ee583fe789caf9ce5d14f653088dd1f55716ce68e849b3",
+    "skland/qrcode_card.py": "44f5f739bafd566e9d7ef3004e7301cc298ebfa867c6c290ddb7c3f507647cd4",
+    "skland/render.py": "26e42830c776bf60a80584af413d79ffa6bbd9699da1d0c611aaf11eb1f3a253",
+    "skland/renderer.py": "e642cfe3b3d74b6f4058b24d9116ea418c2997ff70b34cf08d9ef49084ae47ce",
+    "skland/resources/templates/ark_card.html.jinja2": "91924c2ae9802ca4ddb991ddf82c97975a04bc49fd6c6604e83e213ddf153c7b",
+    "skland/resources/templates/bound_roles.html.jinja2": "69f964cb9b4bc1faa6c9d2e881dbf43bc88687f6fa68d76b84847ae2b40513e9",
+    "skland/resources/templates/clue.html.jinja2": "d05de4f0278a546e73477c5fda326d78911f3e06a324d1571845da589c9560d1",
+    "skland/resources/templates/ef_gacha.html.jinja2": "dfe308a0b5b3eccdee3811866d685a7a5f61f19e803cd4da784813ea152dca2d",
+    "skland/resources/templates/ef_gacha.js": "7884e2b0ffb1dd07905c0be7f8d7f9285834f547c3c4e5bc27f4c6068278a810",
+    "skland/resources/templates/ef_gacha_macros.html.jinja2": "cc5567c4d978f7f3b307371f4a0ee0d3333712adc5f32ac7bcd4adf36c2c604c",
+    "skland/resources/templates/ef_war_echoes.html.jinja2": "008f7aad92731c49b4a204039c2e0a443a751449f278688833f0ba3403b89e29",
+    "skland/resources/templates/endfield_card.html.jinja2": "b8bc8978c06a4a1edf637c786ddb9aa29be928ba133ef025cfdb283c1da21c12",
+    "skland/resources/templates/endfield_macros.html.jinja2": "ea2d79215ef765809c83a648a875b1835a4737e601de56bb03e601791d2fd440",
+    "skland/resources/templates/gacha.html.jinja2": "58a04b61570a700488261de423340ceb94085898f23a6717bc1c04ec85ddd18e",
+    "skland/resources/templates/gacha_macros.html.jinja2": "60988f35f0ea57e4c5a7fe3d9b39ba55fe3f262decf99b509bc8726727f63d35",
+    "skland/resources/templates/index.css": "13a449248d0208c6a6695369769e7866820b99c64f70d1a7166cdd85dde860d5",
+    "skland/resources/templates/macros.html.jinja2": "a3173b52712a17f16d405d4ecdaf70f78617dde5b5069f41d9d9662e350809c8",
+    "skland/resources/templates/operator_roster.html.jinja2": "ea2c89e7755dc2fd62e52d005066f4074694d1ec0208da024c659737a7df977b",
+    "skland/resources/templates/operator_roster_macros.html.jinja2": "8e2170efb239f5c7351ff136cf7e763fa6ef8ed4c08a8065ea56207f1ce8949f",
+    "skland/resources/templates/rogue.html.jinja2": "5dc539370a88f726d52ed158d1da01c64a9ef9f77c58a5ac753fb012ab9babe6",
+    "skland/resources/templates/rogue_info.html.jinja2": "a3bb7dedbc3ed3f1168be5d7be23206646469098366aa61458e7b7ad0abdf512",
+    "skland/resources/templates/rogue_macros.html.jinja2": "928233c34a2a1285394f3a94299cc62cc36590e2365d1d6f2dfdcf3a391ab24a",
+    "skland/resourcesync.py": "9cfb0abee263dbf923b0be28eb99d5ae0278b116a7e40de121d7f908b1ce6324",
+    "skland/schemas/__init__.py": "c171832f767726579fac52f6d63124ee603ff94bcf8ac16c3b162be962e1fb27",
+    "skland/schemas/arknights/__init__.py": "d8e0c20b91c672ba9baab9214468a0f60f1177692b24b14e4a83752b1e216d6f",
+    "skland/schemas/arknights/card.py": "937a3e119022c9bad95744210f0f4a8342043371dad78879f9c7414ba9baad82",
+    "skland/schemas/arknights/gacha/__init__.py": "bf6e662cb450debdc3fb3cb9c06daf2d9d9c1282586d256c70b1b964f7a5dd7b",
+    "skland/schemas/arknights/gacha/base.py": "f90f89fc13c6d5a7a9e032ab3346c4faf6f5273ce1e83f6b9ea122c19d5afea2",
+    "skland/schemas/arknights/gacha/pool.py": "0bfd689b6ad73819ab18fdc6d32f5b72f4c167810c80e71c87c240b7df482f69",
+    "skland/schemas/arknights/gacha/statistics.py": "27951feda64f18a072446510abcd145b06383d73b74fa739496224fc7a1f1eda",
+    "skland/schemas/arknights/game_data.py": "7a34ea546672a868d28da40217e86f8df0e1b763f83772630383250ea596a95d",
+    "skland/schemas/arknights/models/__init__.py": "c6e77ccdc19e22ff89f978fdc1a41199ec082a821861c489e3f593c0f6705b02",
+    "skland/schemas/arknights/models/assist_chars.py": "ea118db8401034a6c1e266a502947197218fc4ea55a6f8af64252dc0feceaed9",
+    "skland/schemas/arknights/models/base.py": "1f5bd0f6e45deaa657429ea808dca38f536604232ca6af05b0b5078b98d94851",
+    "skland/schemas/arknights/models/building.py": "9808acae37ba0fbb74c2a1ca7146f605111fb599da9a1003775b731a0862c532",
+    "skland/schemas/arknights/models/buildings/__init__.py": "59e3f5a925292bf1140dc133ce32379a8a491f6d7f1cfa355256d9b54f9399da",
+    "skland/schemas/arknights/models/buildings/base.py": "bd3da65749df79dafc888bcfc84f897782df19bfe615cc8ce3e99451d0a5a66f",
+    "skland/schemas/arknights/models/buildings/control.py": "a3c57990ce427a077169c30965ca4e16229f5e25f5e8d3db10beba3e77725b1a",
+    "skland/schemas/arknights/models/buildings/dormitory.py": "0e39baf46d7538fbe1c93c7e820b18f0a9866822774bc40c819bc436fd0cb013",
+    "skland/schemas/arknights/models/buildings/hire.py": "04c99a8203bd6adc4c9db210138c30c9baf1e52fe5be84a7836304ba0eaf55d1",
+    "skland/schemas/arknights/models/buildings/manufacture.py": "a80b01b234a2ea2dbfec40207a15caffaaf075e52e531542a0412521c7d51186",
+    "skland/schemas/arknights/models/buildings/meeting.py": "ef96eb7bfefc3b45d0b1ca281ca53a5e0d295f0d620d2e7bbb6ef196d5ee25f3",
+    "skland/schemas/arknights/models/buildings/power.py": "0a2fdaebb359f4610be151abd8410159dfe394ae3f660f7d81a4f12e4232ea49",
+    "skland/schemas/arknights/models/buildings/tired.py": "6ac3651f985a3bbce09cb85f3688440a23d1b25bca25ffdfa6fd4e69a8706bbc",
+    "skland/schemas/arknights/models/buildings/trading.py": "85895136d6599a97cc4485b8f0785ee4f2d936e5ecef229b455c0eaea1128245",
+    "skland/schemas/arknights/models/buildings/training.py": "84b81f176d3bf422b88daa6cbc50389619730d7cc4ef77c46c41eda5d60f2402",
+    "skland/schemas/arknights/models/campaign.py": "8b0fdc8d257c4eccc31802e63feebd938dabf54239554870ec13eb67afebdd08",
+    "skland/schemas/arknights/models/chars.py": "ccefe147c7bc0ec75e5a9f512ee82733e03fcc4bcc480b6ca90280f771aefef2",
+    "skland/schemas/arknights/models/medal.py": "7a2a763f13a0aba09d912304f52c6d8927abe586d0d81b36316db5be35578e54",
+    "skland/schemas/arknights/models/recruit.py": "239a6cee9ba3d1ef63268fd1bf7e12b0e0731bc562719db943c69b83cba7bec5",
+    "skland/schemas/arknights/models/routine.py": "c6375b53d68f2bae530c4eb9e7576d670fa93dba223b7122713e7a8ccffeac80",
+    "skland/schemas/arknights/models/skins.py": "9a6c97ea89f032bd616537c1b48e97f2ccbb6fb6dbf02f50ef33660408bda779",
+    "skland/schemas/arknights/models/status.py": "3f67adad621d5d971898d6d3b30b4b27e753c6bc53367bae56c8347415a29e0c",
+    "skland/schemas/arknights/models/tower.py": "c82e0f1965264c1708c235ccd598b4d48a05ca878e06c06fec4be2be62779aeb",
+    "skland/schemas/arknights/operator_query.py": "e93ea3ad1335a72f83c5bbe09284b1e72e0b595d6d737b4d4e3ac01a4f1abbe4",
+    "skland/schemas/arknights/operators.py": "758b6a5f804183e2fb555ba643cfb80623c32dba751b841e05817dfd2099815a",
+    "skland/schemas/arknights/rogue/__init__.py": "fe4e36f7a93a8f637d4b0f368d0e9232f81bce630be142c40b31e47f1ee16982",
+    "skland/schemas/arknights/rogue/career.py": "44bc9fd573d0d8fc62ba6bf972d282f811234ef12792a203d031c8bb5d64c9ce",
+    "skland/schemas/arknights/rogue/data.py": "f2d0855b9f29366b56935bd0123e795f0dfc6c574c899e9d1183c63f389ef32c",
+    "skland/schemas/arknights/rogue/history.py": "23f5fe81aa1a0354901a3b9b0c73a2fd798bd4afbd46225419b23e0721e0f5ff",
+    "skland/schemas/arknights/sign.py": "cfbb7b23a118d5dc6d3d5489167b884ef9bc7c9d780227d0ce084219cb6da118",
+    "skland/schemas/binding.py": "b287e62804dca7b897e74da36fb4fa42cd1cc486258465eb84e264126edc6e61",
+    "skland/schemas/cred.py": "d786cecfa7c9ecb91574c22642c121e644f8db24c26b0053786d76c40a302564",
+    "skland/schemas/endfield/__init__.py": "7b079900301266203188be98246b56a9dabd5a15e42e800408c75a356b3867d8",
+    "skland/schemas/endfield/card.py": "2200c023a26866b4d57c90fc2a1467b3946cc798f13f0da980c6a0de319f3366",
+    "skland/schemas/endfield/gacha/__init__.py": "614557294e71a580086584255e2c3243e1434110b4a7b03f0de3e7efe7478d4b",
+    "skland/schemas/endfield/gacha/base.py": "09a0284c1636f3bdc32ede1933a330a17f793978dcdb7c46cdba870ba6abd405",
+    "skland/schemas/endfield/gacha/pool.py": "edd40472274be7060eed7fafce8e1d19a51d26dc65f1f64ad18dedf0e3e10e21",
+    "skland/schemas/endfield/gacha/statistics.py": "9e2390924ad77a2ec995d7bf6f6c1a00ae91b3a7a2992d5cf25c18a9858a3e79",
+    "skland/schemas/endfield/gacha/view.py": "96e9cd2ec4de82c54dd8983ea6612f0e423556c99f46869bf93ed54f45757786",
+    "skland/schemas/endfield/sign.py": "22005036af26c57ddce4d1ba6fa3b566afb65ee1e5786a157c029d9b7f9db3ef",
+    "skland/schemas/endfield/war_echoes.py": "7d2b35d6e6c326cd2f912c20ad26708fa287b28d6138217b72127670c32bc77c",
+    "skland/schemas/sign.py": "4a6785ea5883d9cd857070b4b0cf8dc90adf96b974774b5757b3a63eebc28e63",
+    "skland/service.py": "b51a36f4535e9f65855bdadfcffc57495bc6eecb550886d00e6428f8bf35b182",
+    "skland/store.py": "efc0528f673c30c67c80057e102ca7ecb7f40e23cfca3337bc20baaa60c42960",
+    "skland/support_integration.py": "3aba8e0fe63998f00f0fa73a9e642a61b689c002d6e315c62a679ca0c9394b7d"
+  },
+  "assets": {
+    "skland/resources/fonts": {
+      "count": 3,
+      "sha256": "956db6b93720e514a4940c139481a7abab9d5134ec947f8df0bcec0d54e39c20"
+    },
+    "skland/resources/images": {
+      "count": 277,
+      "sha256": "6a37c6172ec22afd83aaddf1c9d7b0a7866b5a9651a210f4a1d43c6fece64542"
+    }
+  },
+  "reviews": {
+    "AGENTS.md": {
+      "status": "M",
+      "disposition": "documentation",
+      "reason": "上游说明、构建或开发配置；由本地说明和运行配置承接",
+      "targets": [
+        "README.md",
+        "UPSTREAM_DIFF.md"
+      ],
+      "upstream_sha256": "a2ef8b2a7a9f3b300380d93a7ebcdb2b364a7367672d3ad6bb17e5f4a5570743"
+    },
+    "README.md": {
+      "status": "M",
+      "disposition": "documentation",
+      "reason": "上游说明、构建或开发配置；由本地说明和运行配置承接",
+      "targets": [
+        "README.md",
+        "UPSTREAM_DIFF.md"
+      ],
+      "upstream_sha256": "97ee19781144c7128e428ad23e6eb00a67b0ecef9502d55c0cc2f9336e47eed5"
+    },
+    "docs/ef_gacha.png": {
+      "status": "M",
+      "disposition": "documentation",
+      "reason": "上游说明、构建或开发配置；由本地说明和运行配置承接",
+      "targets": [
+        "README.md",
+        "UPSTREAM_DIFF.md"
+      ],
+      "upstream_sha256": "5c25e744581cc7026634688b3699e531b398a3c392b8771640a9577cc66165a3"
+    },
+    "nonebot_plugin_skland/__init__.py": {
+      "status": "M",
+      "disposition": "adapted",
+      "reason": "生命周期、命令注册与每日 09:00 数据更新改为 AstrBot",
+      "targets": [
+        "main.py"
+      ],
+      "upstream_sha256": "31cf0c9e831ba5573929eae104246867c8ba47bd8ebdb0c791bf9463e23f8415"
+    },
+    "nonebot_plugin_skland/account.py": {
+      "status": "A",
+      "disposition": "adapted",
+      "reason": "稳定账号/角色 ID 与默认选择使用 SQLite 实现",
+      "targets": [
+        "skland/store.py",
+        "skland/binding.py"
+      ],
+      "upstream_sha256": "7a59c624c0b9d9b570d998fab6e483ec905fe37b25db9a7e86ccd3fa81be3cd1"
+    },
+    "nonebot_plugin_skland/api/request.py": {
+      "status": "M",
+      "disposition": "adapted",
+      "reason": "战争回响 API；保留本地签名与凭证适配",
+      "targets": [
+        "skland/api/request.py"
+      ],
+      "upstream_sha256": "d3b3ea49428d64d9cc7e47ff4ac20abb2687fb9d9efbd26abeb087877251ded7"
+    },
+    "nonebot_plugin_skland/commands/__init__.py": {
+      "status": "M",
+      "disposition": "adapted",
+      "reason": "NoneBot 命令/角色选择改写为 AstrBot 统一解析、权限与服务调用",
+      "targets": [
+        "main.py",
+        "skland/service.py",
+        "skland/commands.py"
+      ],
+      "upstream_sha256": "6d01001b3916b9a340454cece4cb8c6f2efdf50729e8b19425734d70eef0c9e8"
+    },
+    "nonebot_plugin_skland/commands/arksign.py": {
+      "status": "M",
+      "disposition": "adapted",
+      "reason": "NoneBot 命令/角色选择改写为 AstrBot 统一解析、权限与服务调用",
+      "targets": [
+        "main.py",
+        "skland/service.py",
+        "skland/commands.py"
+      ],
+      "upstream_sha256": "63d245dcd6ce4961965847c993db150bfefb99df3f53114899f0c475cca6219d"
+    },
+    "nonebot_plugin_skland/commands/bind.py": {
+      "status": "M",
+      "disposition": "adapted",
+      "reason": "NoneBot 命令/角色选择改写为 AstrBot 统一解析、权限与服务调用",
+      "targets": [
+        "main.py",
+        "skland/service.py",
+        "skland/commands.py"
+      ],
+      "upstream_sha256": "967d5077d6923b39521b7bba0997d5c733d77d01ebef8f8e42b60bfc4b4b1ffa"
+    },
+    "nonebot_plugin_skland/commands/box.py": {
+      "status": "M",
+      "disposition": "adapted",
+      "reason": "NoneBot 命令/角色选择改写为 AstrBot 统一解析、权限与服务调用",
+      "targets": [
+        "main.py",
+        "skland/service.py",
+        "skland/commands.py"
+      ],
+      "upstream_sha256": "71febf54dad129c8bf94e917ad096f3a4fa42df2c38969bf1156059efd05094c"
+    },
+    "nonebot_plugin_skland/commands/card.py": {
+      "status": "M",
+      "disposition": "adapted",
+      "reason": "NoneBot 命令/角色选择改写为 AstrBot 统一解析、权限与服务调用",
+      "targets": [
+        "main.py",
+        "skland/service.py",
+        "skland/commands.py"
+      ],
+      "upstream_sha256": "5072c46773400f13fbfdf8077fad4b202215112ddf3361535675f2af9d9c0b53"
+    },
+    "nonebot_plugin_skland/commands/char.py": {
+      "status": "M",
+      "disposition": "adapted",
+      "reason": "NoneBot 命令/角色选择改写为 AstrBot 统一解析、权限与服务调用",
+      "targets": [
+        "main.py",
+        "skland/service.py",
+        "skland/commands.py"
+      ],
+      "upstream_sha256": "50092cfc5c22aeb77b64acab95287e4cf792208b995c9555f690eefb2b8156db"
+    },
+    "nonebot_plugin_skland/commands/endfield/__init__.py": {
+      "status": "M",
+      "disposition": "adapted",
+      "reason": "NoneBot 命令/角色选择改写为 AstrBot 统一解析、权限与服务调用",
+      "targets": [
+        "main.py",
+        "skland/service.py",
+        "skland/commands.py"
+      ],
+      "upstream_sha256": "c5a977ea9736affbb6ac6e5fd33d609d3dee280754f9915f466cc93ab8c510fd"
+    },
+    "nonebot_plugin_skland/commands/endfield/card.py": {
+      "status": "M",
+      "disposition": "adapted",
+      "reason": "NoneBot 命令/角色选择改写为 AstrBot 统一解析、权限与服务调用",
+      "targets": [
+        "main.py",
+        "skland/service.py",
+        "skland/commands.py"
+      ],
+      "upstream_sha256": "31dd74e394fc830df9aa62593ffc87e4bce6e9049d1f18c40b3ec794e0881ce8"
+    },
+    "nonebot_plugin_skland/commands/endfield/gacha.py": {
+      "status": "M",
+      "disposition": "adapted",
+      "reason": "NoneBot 命令/角色选择改写为 AstrBot 统一解析、权限与服务调用",
+      "targets": [
+        "main.py",
+        "skland/service.py",
+        "skland/commands.py"
+      ],
+      "upstream_sha256": "662c670372a5af9b48e0f1eabbbb02719075252e72b9ba81c82d76023e07b046"
+    },
+    "nonebot_plugin_skland/commands/endfield/sign.py": {
+      "status": "M",
+      "disposition": "adapted",
+      "reason": "NoneBot 命令/角色选择改写为 AstrBot 统一解析、权限与服务调用",
+      "targets": [
+        "main.py",
+        "skland/service.py",
+        "skland/commands.py"
+      ],
+      "upstream_sha256": "50c7d35566a72bf0e9d1846dc752e277cb4b6017571b173b6ccb896b1e34e70e"
+    },
+    "nonebot_plugin_skland/commands/endfield/utils.py": {
+      "status": "D",
+      "disposition": "adapted",
+      "reason": "NoneBot 命令/角色选择改写为 AstrBot 统一解析、权限与服务调用",
+      "targets": [
+        "main.py",
+        "skland/service.py",
+        "skland/commands.py"
+      ],
+      "upstream_sha256": null
+    },
+    "nonebot_plugin_skland/commands/endfield/war_echoes.py": {
+      "status": "A",
+      "disposition": "adapted",
+      "reason": "NoneBot 命令/角色选择改写为 AstrBot 统一解析、权限与服务调用",
+      "targets": [
+        "main.py",
+        "skland/service.py",
+        "skland/commands.py"
+      ],
+      "upstream_sha256": "bacdd02d87e47478f788032872eb5284ae025ba2a7f1dab841987ecb85d21804"
+    },
+    "nonebot_plugin_skland/commands/gacha.py": {
+      "status": "M",
+      "disposition": "adapted",
+      "reason": "NoneBot 命令/角色选择改写为 AstrBot 统一解析、权限与服务调用",
+      "targets": [
+        "main.py",
+        "skland/service.py",
+        "skland/commands.py"
+      ],
+      "upstream_sha256": "e9170bf358f085fb14a171651c89910965efe1f3ec3f6090facf7756a0667cb8"
+    },
+    "nonebot_plugin_skland/commands/rogue.py": {
+      "status": "M",
+      "disposition": "adapted",
+      "reason": "NoneBot 命令/角色选择改写为 AstrBot 统一解析、权限与服务调用",
+      "targets": [
+        "main.py",
+        "skland/service.py",
+        "skland/commands.py"
+      ],
+      "upstream_sha256": "2fb6c38533c605f2a5ec5b1312a0f9de68a306944923b7000999116c79446b33"
+    },
+    "nonebot_plugin_skland/commands/selection.py": {
+      "status": "A",
+      "disposition": "adapted",
+      "reason": "NoneBot 命令/角色选择改写为 AstrBot 统一解析、权限与服务调用",
+      "targets": [
+        "main.py",
+        "skland/service.py",
+        "skland/commands.py"
+      ],
+      "upstream_sha256": "761cbb95a0ac42e587ab90d23f643538f36a4520c22a716e5067156fabf79588"
+    },
+    "nonebot_plugin_skland/commands/sync.py": {
+      "status": "M",
+      "disposition": "adapted",
+      "reason": "NoneBot 命令/角色选择改写为 AstrBot 统一解析、权限与服务调用",
+      "targets": [
+        "main.py",
+        "skland/service.py",
+        "skland/commands.py"
+      ],
+      "upstream_sha256": "a9477429191f7d92ec8e02d1c29c83639457f0cf0c39f626fb7b8053c5960b7d"
+    },
+    "nonebot_plugin_skland/config.py": {
+      "status": "M",
+      "disposition": "adapted",
+      "reason": "保留已有配置值并新增背景、上下文、每日更新默认值",
+      "targets": [
+        "skland/config.py",
+        "_conf_schema.json"
+      ],
+      "upstream_sha256": "a14083f460f79e889d4c442fbb9489f8e107b552221fc011fcf519530f135e3c"
+    },
+    "nonebot_plugin_skland/data_source.py": {
+      "status": "M",
+      "disposition": "adapted",
+      "reason": "数据校验、固定提交与缓存回退使用本地更新服务",
+      "targets": [
+        "skland/resourcesync.py"
+      ],
+      "upstream_sha256": "4a791b7bcc6b9b58be3ad2d8f8c1eb16779097c6235b82edaec78df73cedbc74"
+    },
+    "nonebot_plugin_skland/db_handler.py": {
+      "status": "M",
+      "disposition": "adapted",
+      "reason": "ORM 操作改写为 SQLite 事务及稳定角色关联",
+      "targets": [
+        "skland/store.py"
+      ],
+      "upstream_sha256": "f19a15651892b788beb0b404ce82d6a6fe25c5a05819cb0100d76fcce2f2a73c"
+    },
+    "nonebot_plugin_skland/download.py": {
+      "status": "M",
+      "disposition": "adapted",
+      "reason": "连接复用、官方 API Token、代理直连回退",
+      "targets": [
+        "skland/download.py",
+        "skland/resourcesync.py"
+      ],
+      "upstream_sha256": "3b672f9011245a9f39175587ad80a34459cd1f4e8061dbd51859cb17fa8fa4d3"
+    },
+    "nonebot_plugin_skland/exception.py": {
+      "status": "M",
+      "disposition": "adapted",
+      "reason": "保留本地异常边界和用户提示",
+      "targets": [
+        "skland/exception.py",
+        "main.py"
+      ],
+      "upstream_sha256": "460426f734f1a92570c935ff94daa0721e3d25549b518c460fc32d4922e600a1"
+    },
+    "nonebot_plugin_skland/extras.py": {
+      "status": "M",
+      "disposition": "adapted",
+      "reason": "快捷指令、回复上下文和平台能力适配",
+      "targets": [
+        "main.py",
+        "skland/interactions.py"
+      ],
+      "upstream_sha256": "ea8d17a4a2d432d3f818f63b6c79e6f5fffd33a1be48d533c1e004c5fb13d6f6"
+    },
+    "nonebot_plugin_skland/filters.py": {
+      "status": "M",
+      "disposition": "mirror",
+      "reason": "确定性同步及本地兼容叠加",
+      "targets": [
+        "skland/filters.py"
+      ],
+      "upstream_sha256": "612521c5924d92758b15636b3de2b7582e897830bd52de544ab00c97c03bca9d"
+    },
+    "nonebot_plugin_skland/hook.py": {
+      "status": "M",
+      "disposition": "adapted",
+      "reason": "QQ/OneBot 回执撤回和按平台能力启用消息反应",
+      "targets": [
+        "skland/interactions.py",
+        "skland/qq_message.py"
+      ],
+      "upstream_sha256": "4434ea7c1ff7189b3ec8a3e951e9388ea220fcee8a36aa410515eaf56edb06ea"
+    },
+    "nonebot_plugin_skland/image_cache.py": {
+      "status": "M",
+      "disposition": "adapted",
+      "reason": "保留本地缓存安全校验及动态路径",
+      "targets": [
+        "skland/image_cache.py",
+        "skland/filters.py"
+      ],
+      "upstream_sha256": "4d1d6d275207905fa4748f2dd5ae39709aae382ddae4865604edb622c2481562"
+    },
+    "nonebot_plugin_skland/matcher.py": {
+      "status": "M",
+      "disposition": "adapted",
+      "reason": "命令权限及完整名称快捷展开由 AstrBot 执行",
+      "targets": [
+        "main.py",
+        "skland/commands.py"
+      ],
+      "upstream_sha256": "fb29df85ae6ac00fcc2a675c4b3efb4da62fa6fd0f2b3b03137eeaa89fe4c1e1"
+    },
+    "nonebot_plugin_skland/migrations/6f2c3a9b8d71_multi_account_binding.py": {
+      "status": "A",
+      "disposition": "adapted",
+      "reason": "Alembic 迁移改为带备份的版本化 SQLite 事务迁移，歧义历史保留待归属",
+      "targets": [
+        "skland/store.py",
+        "tests/test_account_migration.py"
+      ],
+      "upstream_sha256": "aac4c84c671f11446127aaa4a8cc14c4deaaa4837c24f71c328992014ff96762"
+    },
+    "nonebot_plugin_skland/model.py": {
+      "status": "M",
+      "disposition": "adapted",
+      "reason": "多账号、角色与历史关联改写为 dataclass / SQLite",
+      "targets": [
+        "skland/models.py",
+        "skland/store.py"
+      ],
+      "upstream_sha256": "eefa679be150f03d5942777bc6105d155110fade7af74f54da05d0c7fb303354"
+    },
+    "nonebot_plugin_skland/player_data.py": {
+      "status": "M",
+      "disposition": "adapted",
+      "reason": "保留 TTL/LRU/并发合并，缓存身份加入账号和完整角色",
+      "targets": [
+        "skland/service.py",
+        "skland/card_cache.py"
+      ],
+      "upstream_sha256": "96652d3d19fa1d11c0f3301836308ef2e2cf3300d8df0d0532e378b3656a80c3"
+    },
+    "nonebot_plugin_skland/render.py": {
+      "status": "M",
+      "disposition": "adapted",
+      "reason": "Playwright 渲染、三列按高度分页及 QQ 图片策略",
+      "targets": [
+        "skland/cards.py",
+        "skland/renderer.py",
+        "skland/image_output.py"
+      ],
+      "upstream_sha256": "96fde94dda7d8d8fe5e223eeab770df7a3559cc32b5743ddb4082781b2fb15a6"
+    },
+    "nonebot_plugin_skland/resources/images/endfield/potential/potential_0.png": {
+      "status": "A",
+      "disposition": "mirror",
+      "reason": "确定性同步及本地兼容叠加",
+      "targets": [
+        "skland/resources/images/endfield/potential/potential_0.png"
+      ],
+      "upstream_sha256": "8247ba70bd647a56f38fb41870b7c7948be923af6ea9c0e6756f0e155aa26bb5"
+    },
+    "nonebot_plugin_skland/resources/images/endfield/potential/potential_1.png": {
+      "status": "M",
+      "disposition": "mirror",
+      "reason": "确定性同步及本地兼容叠加",
+      "targets": [
+        "skland/resources/images/endfield/potential/potential_1.png"
+      ],
+      "upstream_sha256": "7a0f56d87f64037d672dfd8ce503965a3b6cf54dac07c6579c93ec8c510057df"
+    },
+    "nonebot_plugin_skland/resources/images/endfield/potential/potential_2.png": {
+      "status": "M",
+      "disposition": "mirror",
+      "reason": "确定性同步及本地兼容叠加",
+      "targets": [
+        "skland/resources/images/endfield/potential/potential_2.png"
+      ],
+      "upstream_sha256": "7dae62904cceadce8882e24ea75e13e67e2755f50603449a05129efa6695aaba"
+    },
+    "nonebot_plugin_skland/resources/images/endfield/potential/potential_3.png": {
+      "status": "M",
+      "disposition": "mirror",
+      "reason": "确定性同步及本地兼容叠加",
+      "targets": [
+        "skland/resources/images/endfield/potential/potential_3.png"
+      ],
+      "upstream_sha256": "e09f3e0594078a1829fbf0b5f91e9414b72663761bde668234db191cbb561a0e"
+    },
+    "nonebot_plugin_skland/resources/images/endfield/potential/potential_4.png": {
+      "status": "M",
+      "disposition": "mirror",
+      "reason": "确定性同步及本地兼容叠加",
+      "targets": [
+        "skland/resources/images/endfield/potential/potential_4.png"
+      ],
+      "upstream_sha256": "c88d310201bb179cb76e358c4ef7bf6fb722d3d0ab0efdc65b5d8ebf8cb944c2"
+    },
+    "nonebot_plugin_skland/resources/images/endfield/potential/potential_5.png": {
+      "status": "M",
+      "disposition": "mirror",
+      "reason": "确定性同步及本地兼容叠加",
+      "targets": [
+        "skland/resources/images/endfield/potential/potential_5.png"
+      ],
+      "upstream_sha256": "c5025ad273101cce09963924533e311e9225243523aa60d9f774d380fccc6ca9"
+    },
+    "nonebot_plugin_skland/resources/images/endfield/war_echoes/content.png": {
+      "status": "A",
+      "disposition": "mirror",
+      "reason": "确定性同步及本地兼容叠加",
+      "targets": [
+        "skland/resources/images/endfield/war_echoes/content.png"
+      ],
+      "upstream_sha256": "fa65e0edf6a66acb8a85888e08d50c021196f266d05066d8446d0db46cb3c6e0"
+    },
+    "nonebot_plugin_skland/resources/images/endfield/war_echoes/dungeon.png": {
+      "status": "A",
+      "disposition": "mirror",
+      "reason": "确定性同步及本地兼容叠加",
+      "targets": [
+        "skland/resources/images/endfield/war_echoes/dungeon.png"
+      ],
+      "upstream_sha256": "f806b4c51d911300f35ba8a8617004d3528f023d69563f039b1756498242f884"
+    },
+    "nonebot_plugin_skland/resources/images/endfield/war_echoes/dungeon_empty.png": {
+      "status": "A",
+      "disposition": "mirror",
+      "reason": "确定性同步及本地兼容叠加",
+      "targets": [
+        "skland/resources/images/endfield/war_echoes/dungeon_empty.png"
+      ],
+      "upstream_sha256": "34e8e7e1ac9dad446834519f9535ec5c6ec0d1046b419805e59d59ba27569789"
+    },
+    "nonebot_plugin_skland/resources/images/endfield/war_echoes/honor_bronze.png": {
+      "status": "A",
+      "disposition": "mirror",
+      "reason": "确定性同步及本地兼容叠加",
+      "targets": [
+        "skland/resources/images/endfield/war_echoes/honor_bronze.png"
+      ],
+      "upstream_sha256": "a86d090bfb20e405bc8ba10c496776293145821c986b49337fb6b6873abba881"
+    },
+    "nonebot_plugin_skland/resources/images/endfield/war_echoes/honor_gold.png": {
+      "status": "A",
+      "disposition": "mirror",
+      "reason": "确定性同步及本地兼容叠加",
+      "targets": [
+        "skland/resources/images/endfield/war_echoes/honor_gold.png"
+      ],
+      "upstream_sha256": "77806c45bdd9252ec49d9376a52954dfdc793815a270b8c3164f7c0ba10f552e"
+    },
+    "nonebot_plugin_skland/resources/images/endfield/war_echoes/honor_silver.png": {
+      "status": "A",
+      "disposition": "mirror",
+      "reason": "确定性同步及本地兼容叠加",
+      "targets": [
+        "skland/resources/images/endfield/war_echoes/honor_silver.png"
+      ],
+      "upstream_sha256": "e55262816617b9d55479a5f4488afae11fe123e7687e74d951f44126e28c0bf8"
+    },
+    "nonebot_plugin_skland/resources/images/endfield/war_echoes/operator_empty.png": {
+      "status": "A",
+      "disposition": "mirror",
+      "reason": "确定性同步及本地兼容叠加",
+      "targets": [
+        "skland/resources/images/endfield/war_echoes/operator_empty.png"
+      ],
+      "upstream_sha256": "f943f743154eb9e8a88fe33612b860ef49ee6d6a8bbc8e80eeaca845170ae8a3"
+    },
+    "nonebot_plugin_skland/resources/images/endfield/war_echoes/rating_a.png": {
+      "status": "A",
+      "disposition": "mirror",
+      "reason": "确定性同步及本地兼容叠加",
+      "targets": [
+        "skland/resources/images/endfield/war_echoes/rating_a.png"
+      ],
+      "upstream_sha256": "023e00240584f49971c563cbd42d4137b7f3971f5e7ee27c796db1e29fee6cd6"
+    },
+    "nonebot_plugin_skland/resources/images/endfield/war_echoes/rating_b.png": {
+      "status": "A",
+      "disposition": "mirror",
+      "reason": "确定性同步及本地兼容叠加",
+      "targets": [
+        "skland/resources/images/endfield/war_echoes/rating_b.png"
+      ],
+      "upstream_sha256": "aa9edc5baa3cc5882a5fb8122bb6b259b14447445bc8568b4978e3bfab1f4167"
+    },
+    "nonebot_plugin_skland/resources/images/endfield/war_echoes/rating_c.png": {
+      "status": "A",
+      "disposition": "mirror",
+      "reason": "确定性同步及本地兼容叠加",
+      "targets": [
+        "skland/resources/images/endfield/war_echoes/rating_c.png"
+      ],
+      "upstream_sha256": "16f18d4efe4b58ccd35f0e47323f18bf844aaaee88a67ba3b4c83bfe08385493"
+    },
+    "nonebot_plugin_skland/resources/images/endfield/war_echoes/rating_d.png": {
+      "status": "A",
+      "disposition": "mirror",
+      "reason": "确定性同步及本地兼容叠加",
+      "targets": [
+        "skland/resources/images/endfield/war_echoes/rating_d.png"
+      ],
+      "upstream_sha256": "e61e560398cedfdd1963c1545110b676a25bc2135513e395886a081eba6e7222"
+    },
+    "nonebot_plugin_skland/resources/images/endfield/war_echoes/rating_empty.png": {
+      "status": "A",
+      "disposition": "mirror",
+      "reason": "确定性同步及本地兼容叠加",
+      "targets": [
+        "skland/resources/images/endfield/war_echoes/rating_empty.png"
+      ],
+      "upstream_sha256": "8193fbab525ac5dbe5903a744b0a8a504fd1511738bcb126e5c99223574104e0"
+    },
+    "nonebot_plugin_skland/resources/images/endfield/war_echoes/rating_s.png": {
+      "status": "A",
+      "disposition": "mirror",
+      "reason": "确定性同步及本地兼容叠加",
+      "targets": [
+        "skland/resources/images/endfield/war_echoes/rating_s.png"
+      ],
+      "upstream_sha256": "6b5d18b1b603157f575f2fbb65d94d54fa8c91f28e49c1435749ad3d2d1f227a"
+    },
+    "nonebot_plugin_skland/resources/images/endfield/war_echoes/rating_s_plus.png": {
+      "status": "A",
+      "disposition": "mirror",
+      "reason": "确定性同步及本地兼容叠加",
+      "targets": [
+        "skland/resources/images/endfield/war_echoes/rating_s_plus.png"
+      ],
+      "upstream_sha256": "67e49da54837097be16097a1b32bafd56cb4c3b938b736e88fc6f17a08ba2b21"
+    },
+    "nonebot_plugin_skland/resources/images/endfield/war_echoes/season_switch.png": {
+      "status": "A",
+      "disposition": "mirror",
+      "reason": "确定性同步及本地兼容叠加",
+      "targets": [
+        "skland/resources/images/endfield/war_echoes/season_switch.png"
+      ],
+      "upstream_sha256": "db0a724b012da7366ee68ff1ff7dd45afeeaff012e0e10e04b4180676710f2c6"
+    },
+    "nonebot_plugin_skland/resources/images/endfield/war_echoes/stage_0.png": {
+      "status": "A",
+      "disposition": "mirror",
+      "reason": "确定性同步及本地兼容叠加",
+      "targets": [
+        "skland/resources/images/endfield/war_echoes/stage_0.png"
+      ],
+      "upstream_sha256": "67fab19c2007edf61f08aa8007ca92cd68fc407153a3bc1e7bfe0f56fde98d60"
+    },
+    "nonebot_plugin_skland/resources/images/endfield/war_echoes/stage_1.png": {
+      "status": "A",
+      "disposition": "mirror",
+      "reason": "确定性同步及本地兼容叠加",
+      "targets": [
+        "skland/resources/images/endfield/war_echoes/stage_1.png"
+      ],
+      "upstream_sha256": "273505af08f512c199d140bbb82e6a6a0b87f6a317ccf673633d92ddc07e053d"
+    },
+    "nonebot_plugin_skland/resources/images/endfield/war_echoes/stage_2.png": {
+      "status": "A",
+      "disposition": "mirror",
+      "reason": "确定性同步及本地兼容叠加",
+      "targets": [
+        "skland/resources/images/endfield/war_echoes/stage_2.png"
+      ],
+      "upstream_sha256": "de500a74b3409ed4333bfcba1622069924a92ee0c1e0bf6fd75097f7030d60d8"
+    },
+    "nonebot_plugin_skland/resources/images/endfield/war_echoes/stage_3.png": {
+      "status": "A",
+      "disposition": "mirror",
+      "reason": "确定性同步及本地兼容叠加",
+      "targets": [
+        "skland/resources/images/endfield/war_echoes/stage_3.png"
+      ],
+      "upstream_sha256": "39446064611bf476441ac1ce6a6d7c83767a4b043eae01e4d7789a8d33a21c79"
+    },
+    "nonebot_plugin_skland/resources/images/endfield/war_echoes/stage_plus.png": {
+      "status": "A",
+      "disposition": "mirror",
+      "reason": "确定性同步及本地兼容叠加",
+      "targets": [
+        "skland/resources/images/endfield/war_echoes/stage_plus.png"
+      ],
+      "upstream_sha256": "15dba963f9dd4d39f23644f24bdfc0969030f5eadfdcb817a26f1cfc0bf8c640"
+    },
+    "nonebot_plugin_skland/resources/images/endfield/war_echoes/summary_honor.png": {
+      "status": "A",
+      "disposition": "mirror",
+      "reason": "确定性同步及本地兼容叠加",
+      "targets": [
+        "skland/resources/images/endfield/war_echoes/summary_honor.png"
+      ],
+      "upstream_sha256": "bd1c149d8574bd8e740dde06302a3ea2099a63656388a24f3595c5084ba09056"
+    },
+    "nonebot_plugin_skland/resources/images/endfield/war_echoes/summary_rating.png": {
+      "status": "A",
+      "disposition": "mirror",
+      "reason": "确定性同步及本地兼容叠加",
+      "targets": [
+        "skland/resources/images/endfield/war_echoes/summary_rating.png"
+      ],
+      "upstream_sha256": "838c853f36ca464f45c827e1d24ec9ef9d831bd815ad715393e5e90eaad0c1c8"
+    },
+    "nonebot_plugin_skland/resources/images/endfield/war_echoes/time.png": {
+      "status": "A",
+      "disposition": "mirror",
+      "reason": "确定性同步及本地兼容叠加",
+      "targets": [
+        "skland/resources/images/endfield/war_echoes/time.png"
+      ],
+      "upstream_sha256": "106d9c2625a5d2c67a1b384226cbec8606fcf2181ffc38c877a01d887e946233"
+    },
+    "nonebot_plugin_skland/resources/images/endfield/war_echoes/title_rule.png": {
+      "status": "A",
+      "disposition": "mirror",
+      "reason": "确定性同步及本地兼容叠加",
+      "targets": [
+        "skland/resources/images/endfield/war_echoes/title_rule.png"
+      ],
+      "upstream_sha256": "27c27860b9d05cd3b6e258bad7bb27bcc092babed2d7dcb77d757aea49812d55"
+    },
+    "nonebot_plugin_skland/resources/images/endfield/war_echoes/week_1.png": {
+      "status": "A",
+      "disposition": "mirror",
+      "reason": "确定性同步及本地兼容叠加",
+      "targets": [
+        "skland/resources/images/endfield/war_echoes/week_1.png"
+      ],
+      "upstream_sha256": "16409bfb566eec854a2bff87d344488e82e646feed2af68fff8aa702214636c2"
+    },
+    "nonebot_plugin_skland/resources/images/endfield/war_echoes/week_2.png": {
+      "status": "A",
+      "disposition": "mirror",
+      "reason": "确定性同步及本地兼容叠加",
+      "targets": [
+        "skland/resources/images/endfield/war_echoes/week_2.png"
+      ],
+      "upstream_sha256": "3b2dbeb147620cb3bf92dced2dd3fa321dea97dd64c2963a210166326937c300"
+    },
+    "nonebot_plugin_skland/resources/images/endfield/war_echoes/week_3.png": {
+      "status": "A",
+      "disposition": "mirror",
+      "reason": "确定性同步及本地兼容叠加",
+      "targets": [
+        "skland/resources/images/endfield/war_echoes/week_3.png"
+      ],
+      "upstream_sha256": "e820dd58a4d04fb6f84fcac35baf4637b71358d0975336055312e9080fb5efd1"
+    },
+    "nonebot_plugin_skland/resources/templates/bound_roles.html.jinja2": {
+      "status": "A",
+      "disposition": "mirror",
+      "reason": "确定性同步及本地兼容叠加",
+      "targets": [
+        "skland/resources/templates/bound_roles.html.jinja2"
+      ],
+      "upstream_sha256": "69f964cb9b4bc1faa6c9d2e881dbf43bc88687f6fa68d76b84847ae2b40513e9"
+    },
+    "nonebot_plugin_skland/resources/templates/ef_gacha.html.jinja2": {
+      "status": "M",
+      "disposition": "mirror",
+      "reason": "确定性同步及本地兼容叠加",
+      "targets": [
+        "skland/resources/templates/ef_gacha.html.jinja2"
+      ],
+      "upstream_sha256": "dfe308a0b5b3eccdee3811866d685a7a5f61f19e803cd4da784813ea152dca2d"
+    },
+    "nonebot_plugin_skland/resources/templates/ef_gacha.js": {
+      "status": "A",
+      "disposition": "mirror",
+      "reason": "确定性同步及本地兼容叠加",
+      "targets": [
+        "skland/resources/templates/ef_gacha.js"
+      ],
+      "upstream_sha256": "7884e2b0ffb1dd07905c0be7f8d7f9285834f547c3c4e5bc27f4c6068278a810"
+    },
+    "nonebot_plugin_skland/resources/templates/ef_gacha_macros.html.jinja2": {
+      "status": "M",
+      "disposition": "mirror",
+      "reason": "确定性同步及本地兼容叠加",
+      "targets": [
+        "skland/resources/templates/ef_gacha_macros.html.jinja2"
+      ],
+      "upstream_sha256": "cc5567c4d978f7f3b307371f4a0ee0d3333712adc5f32ac7bcd4adf36c2c604c"
+    },
+    "nonebot_plugin_skland/resources/templates/ef_war_echoes.html.jinja2": {
+      "status": "A",
+      "disposition": "mirror",
+      "reason": "确定性同步及本地兼容叠加",
+      "targets": [
+        "skland/resources/templates/ef_war_echoes.html.jinja2"
+      ],
+      "upstream_sha256": "ffbfa20973118fbadf43e4a4a9e7cc001c37b395ab2674b9d05c4d31fe9127b7"
+    },
+    "nonebot_plugin_skland/resources/templates/index.css": {
+      "status": "M",
+      "disposition": "mirror",
+      "reason": "确定性同步及本地兼容叠加",
+      "targets": [
+        "skland/resources/templates/index.css"
+      ],
+      "upstream_sha256": "13a449248d0208c6a6695369769e7866820b99c64f70d1a7166cdd85dde860d5"
+    },
+    "nonebot_plugin_skland/schemas/__init__.py": {
+      "status": "M",
+      "disposition": "adapted",
+      "reason": "保留本地模型兼容导出；新模型由根 schemas 导出",
+      "targets": [
+        "skland/schemas/__init__.py"
+      ],
+      "upstream_sha256": "8fd2566922953ccd80998d3e451fd410166190bd7dfd929372433f5a9a120304"
+    },
+    "nonebot_plugin_skland/schemas/arknights/__init__.py": {
+      "status": "M",
+      "disposition": "adapted",
+      "reason": "保留本地模型兼容导出；新模型由根 schemas 导出",
+      "targets": [
+        "skland/schemas/arknights/__init__.py"
+      ],
+      "upstream_sha256": "ed843194418a0c9daf8060324987f761111ebcdeba78264aa849c4266cd9a3cd"
+    },
+    "nonebot_plugin_skland/schemas/arknights/card.py": {
+      "status": "M",
+      "disposition": "adapted",
+      "reason": "保留本地模型兼容导出；新模型由根 schemas 导出",
+      "targets": [
+        "skland/schemas/arknights/card.py"
+      ],
+      "upstream_sha256": "4a3381bcc7f5fef55e79744e4327a8d1ff9c23dbb3e9e1e604559af9184091de"
+    },
+    "nonebot_plugin_skland/schemas/arknights/operator_query.py": {
+      "status": "A",
+      "disposition": "mirror",
+      "reason": "确定性同步及本地兼容叠加",
+      "targets": [
+        "skland/schemas/arknights/operator_query.py"
+      ],
+      "upstream_sha256": "c823b743d87e45ffdc76057315e0b538bdc7fe1ad956512a3c0ba4f2fc5aca38"
+    },
+    "nonebot_plugin_skland/schemas/arknights/operators.py": {
+      "status": "M",
+      "disposition": "mirror",
+      "reason": "确定性同步及本地兼容叠加",
+      "targets": [
+        "skland/schemas/arknights/operators.py"
+      ],
+      "upstream_sha256": "6b08c427ddd9ae6202fefdeb1968f73d1ef3f5f4a17065427be3f5ec6c697bdd"
+    },
+    "nonebot_plugin_skland/schemas/arknights/sign.py": {
+      "status": "M",
+      "disposition": "adapted",
+      "reason": "保留本地模型兼容导出；新模型由根 schemas 导出",
+      "targets": [
+        "skland/schemas/arknights/sign.py"
+      ],
+      "upstream_sha256": "01dbb493e2f3b261dbcd13149b04809530327846f11c5917814bec41c3604344"
+    },
+    "nonebot_plugin_skland/schemas/binding.py": {
+      "status": "M",
+      "disposition": "mirror",
+      "reason": "确定性同步及本地兼容叠加",
+      "targets": [
+        "skland/schemas/binding.py"
+      ],
+      "upstream_sha256": "4f59ab6b5f50216b379392864a57b5282b1dc1540c515b220ace03738b33e1c2"
+    },
+    "nonebot_plugin_skland/schemas/endfield/__init__.py": {
+      "status": "M",
+      "disposition": "adapted",
+      "reason": "保留本地模型兼容导出；新模型由根 schemas 导出",
+      "targets": [
+        "skland/schemas/endfield/__init__.py"
+      ],
+      "upstream_sha256": "3f4cb96e6c17eba0e1f2c0aabc01437a78ee5f482d26f4e41d89daa14d1f41c8"
+    },
+    "nonebot_plugin_skland/schemas/endfield/gacha/__init__.py": {
+      "status": "M",
+      "disposition": "adapted",
+      "reason": "保留本地模型兼容导出；新模型由根 schemas 导出",
+      "targets": [
+        "skland/schemas/endfield/gacha/__init__.py"
+      ],
+      "upstream_sha256": "c98eb432731a8204f0976ce31e08c403a81d47c9fbf458f58ba59a83ac5e22e8"
+    },
+    "nonebot_plugin_skland/schemas/endfield/gacha/statistics.py": {
+      "status": "M",
+      "disposition": "adapted",
+      "reason": "保留本地模型兼容导出；新模型由根 schemas 导出",
+      "targets": [
+        "skland/schemas/endfield/gacha/statistics.py"
+      ],
+      "upstream_sha256": "7f3d6d5b58a27f5ebaf26a3b4aa0027c7dc1833825f13784983aad59aff3adfb"
+    },
+    "nonebot_plugin_skland/schemas/endfield/gacha/view.py": {
+      "status": "A",
+      "disposition": "mirror",
+      "reason": "确定性同步及本地兼容叠加",
+      "targets": [
+        "skland/schemas/endfield/gacha/view.py"
+      ],
+      "upstream_sha256": "96e9cd2ec4de82c54dd8983ea6612f0e423556c99f46869bf93ed54f45757786"
+    },
+    "nonebot_plugin_skland/schemas/endfield/war_echoes.py": {
+      "status": "A",
+      "disposition": "mirror",
+      "reason": "确定性同步及本地兼容叠加",
+      "targets": [
+        "skland/schemas/endfield/war_echoes.py"
+      ],
+      "upstream_sha256": "7d2b35d6e6c326cd2f912c20ad26708fa287b28d6138217b72127670c32bc77c"
+    },
+    "nonebot_plugin_skland/schemas/sign.py": {
+      "status": "A",
+      "disposition": "adapted",
+      "reason": "签到结果采用本地角色主键记录及结构化模型",
+      "targets": [
+        "skland/store.py",
+        "skland/schemas/sign.py"
+      ],
+      "upstream_sha256": "75c564a0fb746e2dde4c16fca49cd0db034250b7739b4c86bb8f67edabe2dce0"
+    },
+    "nonebot_plugin_skland/services/__init__.py": {
+      "status": "A",
+      "disposition": "adapted",
+      "reason": "领域服务保留现有本地分层",
+      "targets": [
+        "skland/service.py"
+      ],
+      "upstream_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "nonebot_plugin_skland/services/auth.py": {
+      "status": "A",
+      "disposition": "adapted",
+      "reason": "凭证刷新检查账号身份及条件写回",
+      "targets": [
+        "skland/service.py",
+        "skland/store.py"
+      ],
+      "upstream_sha256": "8a732f32e15a4e12b41aa09fbdc99c8866f88060bc9de1485fb08cc99880f2eb"
+    },
+    "nonebot_plugin_skland/services/binding.py": {
+      "status": "A",
+      "disposition": "adapted",
+      "reason": "脱离事务的确认预览、互斥及提交前版本核验",
+      "targets": [
+        "skland/binding.py",
+        "skland/store.py",
+        "main.py"
+      ],
+      "upstream_sha256": "846e7b85cc5aa66105542a8fe87934762db6fb2a5991f48a2f08109684c7cea8"
+    },
+    "nonebot_plugin_skland/services/gacha.py": {
+      "status": "A",
+      "disposition": "adapted",
+      "reason": "按角色存储、自动同步/缓存回退、免费抽与联合寻访",
+      "targets": [
+        "skland/service.py",
+        "skland/gacha.py"
+      ],
+      "upstream_sha256": "6e482b41fdf0a9a03aa3c9d6e145854599237f24d444781da2e67732b0477590"
+    },
+    "nonebot_plugin_skland/services/resources.py": {
+      "status": "A",
+      "disposition": "adapted",
+      "reason": "启动、手动和每日更新共用互斥服务",
+      "targets": [
+        "skland/resourcesync.py"
+      ],
+      "upstream_sha256": "32aaf519a4b283032ac91c9dfee9d0bdf0610994c0f0892414297df517710b33"
+    },
+    "nonebot_plugin_skland/services/sign.py": {
+      "status": "A",
+      "disposition": "adapted",
+      "reason": "双游戏按角色签到，保留中文命令与管理员全体入口",
+      "targets": [
+        "skland/service.py",
+        "skland/store.py",
+        "main.py"
+      ],
+      "upstream_sha256": "5072d44fab67899bb57e838714c31d246fe067043f585b5d9a0ff199b544f8ce"
+    },
+    "nonebot_plugin_skland/tasks.py": {
+      "status": "M",
+      "disposition": "adapted",
+      "reason": "服务器本地时区每日数据更新；自动签到默认关闭",
+      "targets": [
+        "main.py"
+      ],
+      "upstream_sha256": "169902173de3fc299d8131f8d0a184c62bd17cb85188da34c6d019cc27c1a1ad"
+    },
+    "nonebot_plugin_skland/utils.py": {
+      "status": "D",
+      "disposition": "adapted",
+      "reason": "上游拆分旧工具模块；对应职责迁入本地服务和适配器",
+      "targets": [
+        "skland/service.py",
+        "skland/background.py",
+        "skland/interactions.py"
+      ],
+      "upstream_sha256": null
+    },
+    "nonebot_plugin_skland/utils/__init__.py": {
+      "status": "A",
+      "disposition": "adapted",
+      "reason": "上游包布局调整；本地无需框架工具包",
+      "targets": [
+        "skland/__init__.py"
+      ],
+      "upstream_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "nonebot_plugin_skland/utils/background.py": {
+      "status": "A",
+      "disposition": "adapted",
+      "reason": "默认/随机/CustomSource/Lolicon 与失败回退",
+      "targets": [
+        "skland/background.py"
+      ],
+      "upstream_sha256": "1b472acb19b6bedf594ac120923440522f0d0f83c92c50f315753706a55a0770"
+    },
+    "nonebot_plugin_skland/utils/message.py": {
+      "status": "A",
+      "disposition": "adapted",
+      "reason": "回执、多图转发和反应按 AstrBot 平台能力适配",
+      "targets": [
+        "skland/interactions.py",
+        "skland/qq_message.py"
+      ],
+      "upstream_sha256": "4d080bd4a34f92f4687d2dc9ae7b330b7357832442b60b4d832361a2fe839663"
+    },
+    "nonebot_plugin_skland/utils/qrcode.py": {
+      "status": "A",
+      "disposition": "adapted",
+      "reason": "保留本地二维码卡、PNG 策略及确认/退出清理",
+      "targets": [
+        "skland/qrcode_card.py",
+        "main.py"
+      ],
+      "upstream_sha256": "454b2ff98d0a6d77ecb62e666f4b75025cafb8715c7ee54ef667c394926eb804"
+    },
+    "pyproject.toml": {
+      "status": "M",
+      "disposition": "documentation",
+      "reason": "上游说明、构建或开发配置；由本地说明和运行配置承接",
+      "targets": [
+        "README.md",
+        "UPSTREAM_DIFF.md"
+      ],
+      "upstream_sha256": "05167fa45858d3ba207c79bcfecd8f853d0a9824bc7a57ab12aed2a9005e288c"
+    },
+    "tailwind.css": {
+      "status": "M",
+      "disposition": "documentation",
+      "reason": "上游说明、构建或开发配置；由本地说明和运行配置承接",
+      "targets": [
+        "README.md",
+        "UPSTREAM_DIFF.md"
+      ],
+      "upstream_sha256": "b92ae611b9b072c9d4bbc147cb57a3b981afcfefef68536f69b6c186bf0da34b"
+    },
+    "tests/conftest.py": {
+      "status": "M",
+      "disposition": "test",
+      "reason": "上游测试语义由本地领域测试、模拟 HTTP/事件和浏览器验收覆盖",
+      "targets": [
+        "tests"
+      ],
+      "upstream_sha256": "136bc3c396f348639362bfa4d84548e01f43b44621db905537038fe40e635db3"
+    },
+    "tests/test_account_management.py": {
+      "status": "A",
+      "disposition": "test",
+      "reason": "上游测试语义由本地领域测试、模拟 HTTP/事件和浏览器验收覆盖",
+      "targets": [
+        "tests"
+      ],
+      "upstream_sha256": "17c321ce44d957570741bbbd46c70fa66bf08ab14bdc42c173f9dbc622550eba"
+    },
+    "tests/test_auth.py": {
+      "status": "A",
+      "disposition": "test",
+      "reason": "上游测试语义由本地领域测试、模拟 HTTP/事件和浏览器验收覆盖",
+      "targets": [
+        "tests"
+      ],
+      "upstream_sha256": "2f3010e503b6d971913981590e190ce266330948e5c208ea4c6dac39fbe30e7f"
+    },
+    "tests/test_bind.py": {
+      "status": "A",
+      "disposition": "test",
+      "reason": "上游测试语义由本地领域测试、模拟 HTTP/事件和浏览器验收覆盖",
+      "targets": [
+        "tests"
+      ],
+      "upstream_sha256": "4d9cec2e3a662df29d2ba30eee93c81faf1bf2558ddb07674164f0168d05d958"
+    },
+    "tests/test_bound_roles.py": {
+      "status": "A",
+      "disposition": "test",
+      "reason": "上游测试语义由本地领域测试、模拟 HTTP/事件和浏览器验收覆盖",
+      "targets": [
+        "tests"
+      ],
+      "upstream_sha256": "4c66390811ee6fff96ce6cc93bcceb4ec775d8e8c9b07d8dd33c25ee327eab16"
+    },
+    "tests/test_data_source.py": {
+      "status": "A",
+      "disposition": "test",
+      "reason": "上游测试语义由本地领域测试、模拟 HTTP/事件和浏览器验收覆盖",
+      "targets": [
+        "tests"
+      ],
+      "upstream_sha256": "52e153208d498d7623d35418a10377eb41d6fdfc8e3a2b7252358a32535e8138"
+    },
+    "tests/test_download.py": {
+      "status": "A",
+      "disposition": "test",
+      "reason": "上游测试语义由本地领域测试、模拟 HTTP/事件和浏览器验收覆盖",
+      "targets": [
+        "tests"
+      ],
+      "upstream_sha256": "76f64064b29aded7fe0f750db0452c4dc77a345153c15e0eed75ae02f08622c5"
+    },
+    "tests/test_ef_gacha_command.py": {
+      "status": "A",
+      "disposition": "test",
+      "reason": "上游测试语义由本地领域测试、模拟 HTTP/事件和浏览器验收覆盖",
+      "targets": [
+        "tests"
+      ],
+      "upstream_sha256": "ffac58a30af9cb55d431f6739a101e884c81d80a43a0b80e31277383ab573dd7"
+    },
+    "tests/test_ef_gacha_joint_pool.py": {
+      "status": "M",
+      "disposition": "test",
+      "reason": "上游测试语义由本地领域测试、模拟 HTTP/事件和浏览器验收覆盖",
+      "targets": [
+        "tests"
+      ],
+      "upstream_sha256": "1ca367495023b133f41eefe8a5e657164a937676861c16c471b8de2631be55f9"
+    },
+    "tests/test_ef_gacha_view.py": {
+      "status": "A",
+      "disposition": "test",
+      "reason": "上游测试语义由本地领域测试、模拟 HTTP/事件和浏览器验收覆盖",
+      "targets": [
+        "tests"
+      ],
+      "upstream_sha256": "771437f67fe3c6c7b9b60f614fd60899876c040bb45bba9d6b0ead59ab40e827"
+    },
+    "tests/test_image_cache.py": {
+      "status": "M",
+      "disposition": "test",
+      "reason": "上游测试语义由本地领域测试、模拟 HTTP/事件和浏览器验收覆盖",
+      "targets": [
+        "tests"
+      ],
+      "upstream_sha256": "64173de16e864ad27075ffbd70d948ab60f80d7264f63f2b02a8eb458063c09d"
+    },
+    "tests/test_multi_account_migration.py": {
+      "status": "A",
+      "disposition": "test",
+      "reason": "上游测试语义由本地领域测试、模拟 HTTP/事件和浏览器验收覆盖",
+      "targets": [
+        "tests"
+      ],
+      "upstream_sha256": "0a61b9da5c96cebc4e591c4c7b9df831e86416e28f500594abfd934f82a0503b"
+    },
+    "tests/test_operator_roster.py": {
+      "status": "M",
+      "disposition": "test",
+      "reason": "上游测试语义由本地领域测试、模拟 HTTP/事件和浏览器验收覆盖",
+      "targets": [
+        "tests"
+      ],
+      "upstream_sha256": "57084579c6fc24ae44c384c1e76953fe9b86cd2e747455ad14495bd9e7741f3a"
+    },
+    "tests/test_player_data.py": {
+      "status": "M",
+      "disposition": "test",
+      "reason": "上游测试语义由本地领域测试、模拟 HTTP/事件和浏览器验收覆盖",
+      "targets": [
+        "tests"
+      ],
+      "upstream_sha256": "cd6a63d770e6f4bcd090613ce7bb7da2150185487f758942ff3ec414b1a9cd47"
+    },
+    "tests/test_qrcode.py": {
+      "status": "M",
+      "disposition": "test",
+      "reason": "上游测试语义由本地领域测试、模拟 HTTP/事件和浏览器验收覆盖",
+      "targets": [
+        "tests"
+      ],
+      "upstream_sha256": "88e6a34a38755bef360bad9e35a74c3a44bd63af3ac11b6a6a5828decfb80803"
+    },
+    "tests/test_render.py": {
+      "status": "D",
+      "disposition": "test",
+      "reason": "上游测试语义由本地领域测试、模拟 HTTP/事件和浏览器验收覆盖",
+      "targets": [
+        "tests"
+      ],
+      "upstream_sha256": null
+    },
+    "tests/test_resource_updates.py": {
+      "status": "A",
+      "disposition": "test",
+      "reason": "上游测试语义由本地领域测试、模拟 HTTP/事件和浏览器验收覆盖",
+      "targets": [
+        "tests"
+      ],
+      "upstream_sha256": "ab169a3e005629c53042e3338c791a2be8132dd753d8c0ea2799d97950bb237a"
+    },
+    "tests/test_role_selection.py": {
+      "status": "A",
+      "disposition": "test",
+      "reason": "上游测试语义由本地领域测试、模拟 HTTP/事件和浏览器验收覆盖",
+      "targets": [
+        "tests"
+      ],
+      "upstream_sha256": "a27f6ad7ece80bd5edb20cdd2ab240f0800ea7eb61805efb378fc47f13d02825"
+    },
+    "tests/test_sign.py": {
+      "status": "A",
+      "disposition": "test",
+      "reason": "上游测试语义由本地领域测试、模拟 HTTP/事件和浏览器验收覆盖",
+      "targets": [
+        "tests"
+      ],
+      "upstream_sha256": "0dc01be05ab4b7a6f94275763a13e04a67ddd5a517283ca44bcb8212e5a662b4"
+    },
+    "tests/test_skland_api.py": {
+      "status": "M",
+      "disposition": "test",
+      "reason": "上游测试语义由本地领域测试、模拟 HTTP/事件和浏览器验收覆盖",
+      "targets": [
+        "tests"
+      ],
+      "upstream_sha256": "c0ed47615b0feb3907956773615a82c20b04f1ef5e796ac4347d8e7c489634ca"
+    },
+    "tests/test_war_echoes.py": {
+      "status": "A",
+      "disposition": "test",
+      "reason": "上游测试语义由本地领域测试、模拟 HTTP/事件和浏览器验收覆盖",
+      "targets": [
+        "tests"
+      ],
+      "upstream_sha256": "b13c757e793de500a84e603bc52608c387bcaedc015ef030a4f10ef007ea4b7c"
+    }
+  }
+}

@@ -4,6 +4,8 @@ from pydantic import AnyUrl as Url
 
 from .config import RES_DIR, TEMPLATES_DIR, config
 from .filters import (
+    war_echoes_asset, war_echoes_rating_asset, war_echoes_stage_asset,
+    war_echoes_potential_asset, format_war_echoes_date, format_war_echoes_duration,
     ark_profession_icon_url,
     ark_rarity_icon_url,
     ark_roster_lh_url,
@@ -31,6 +33,7 @@ from .filters import (
 from .models import Character
 from .renderer import template_to_pic
 from .schemas import (
+    EfGachaView, BoundRolesCard, WarEchoesView,
     ArkCard,
     Clue,
     EfGroupedGachaRecord,
@@ -108,7 +111,7 @@ async def render_ark_card(props: ArkCard, bg: str | Url) -> bytes:
     )
 
 
-async def render_rogue_card(props: RogueData, bg: str | Url) -> bytes:
+async def render_rogue_card(props: RogueData, bg: str | Url, *, server_name: str | None = None) -> bytes:
     return await template_to_pic(
         template_path=str(TEMPLATES_DIR),
         template_name="rogue.html.jinja2",
@@ -119,6 +122,7 @@ async def render_rogue_card(props: RogueData, bg: str | Url) -> bytes:
             "now_ts": datetime.now().timestamp(),
             "career": props.career,
             "game_user_info": props.gameUserInfo,
+            "server_name": server_name,
             "history": props.history,
         },
         filters={
@@ -221,47 +225,14 @@ async def render_gacha_history(
     )
 
 
-EF_GACHA_BASE_MIN_WIDTH = 680
-EF_GACHA_JOINT_MIN_WIDTH = 900
-EF_GACHA_VIEWPORT_PADDING = 120
-
-
-def get_ef_gacha_min_width(props: EfGroupedGachaRecord) -> int:
-    return EF_GACHA_JOINT_MIN_WIDTH if props.joint_pools else EF_GACHA_BASE_MIN_WIDTH
-
-
-def get_ef_gacha_viewport_width(props: EfGroupedGachaRecord) -> int:
-    return get_ef_gacha_min_width(props) + EF_GACHA_VIEWPORT_PADDING
-
-
-async def render_ef_gacha_history(
-    props: EfGroupedGachaRecord,
-    player: PlayerBase,
-    char: Character,
-    begin: int | None = None,
-    limit: int | None = None,
-) -> bytes:
+async def render_ef_gacha_history(props: EfGachaView) -> list[bytes]:
     return await template_to_pic(
-        template_path=str(TEMPLATES_DIR),
-        template_name="ef_gacha.html.jinja2",
-        templates={
-            "avatar_url": player.avatarUrl,
-            "record": props,
-            "character": char,
-            "ef_gacha_min_width": get_ef_gacha_min_width(props),
-            "start_index": begin,
-            "end_index": limit,
-        },
-        filters={
-            "format_timestamp_md": format_timestamp_md,
-            "ef_charId_to_avatarUrl": ef_charId_to_avatarUrl,
-        },
-        pages={
-            "viewport": {"width": get_ef_gacha_viewport_width(props), "height": 1},
-            "base_url": f"file://{TEMPLATES_DIR}",
-        },
-        device_scale_factor=1.5,
-        screenshot_timeout=config.render_timeout,
+        template_path=str(TEMPLATES_DIR), template_name="ef_gacha.html.jinja2",
+        templates={"props": props},
+        filters={"format_timestamp_md": format_timestamp_md, "ef_charId_to_avatarUrl": ef_charId_to_avatarUrl},
+        pages={"viewport": {"width": 800, "height": 1600}}, device_scale_factor=1.5,
+        screenshot_timeout=config.render_timeout, readiness="resources",
+        pagination={"maxHeight": 1600, "maxPools": config.ef_gacha_render_max},
     )
 
 
@@ -359,4 +330,44 @@ async def render_ef_card(
             "base_url": f"file://{TEMPLATES_DIR}",
         },
         screenshot_timeout=config.render_timeout,
+    )
+
+
+async def render_bound_roles_card(props: BoundRolesCard) -> bytes:
+    return await template_to_pic(
+        template_path=str(TEMPLATES_DIR),
+        template_name="bound_roles.html.jinja2",
+        templates={"props": props},
+        pages={
+            "viewport": {"width": 706, "height": 1},
+            "base_url": f"file://{TEMPLATES_DIR}",
+        },
+        device_scale_factor=1.5,
+        screenshot_timeout=config.render_timeout,
+        type="png",
+    )
+
+
+async def render_ef_war_echoes(props: WarEchoesView) -> bytes:
+    return await template_to_pic(
+        template_path=str(TEMPLATES_DIR),
+        template_name="ef_war_echoes.html.jinja2",
+        templates={"view": props},
+        filters={
+            "war_echoes_asset": war_echoes_asset,
+            "war_echoes_rating_asset": war_echoes_rating_asset,
+            "war_echoes_stage_asset": war_echoes_stage_asset,
+            "war_echoes_potential_asset": war_echoes_potential_asset,
+            "get_property_icon": get_property_icon,
+            "get_rarity_color": get_rarity_color,
+            "format_war_echoes_date": format_war_echoes_date,
+            "format_war_echoes_duration": format_war_echoes_duration,
+        },
+        pages={
+            "viewport": {"width": 422, "height": 1},
+            "base_url": TEMPLATES_DIR.as_uri(),
+        },
+        device_scale_factor=2,
+        screenshot_timeout=config.render_timeout,
+        readiness="resources",
     )

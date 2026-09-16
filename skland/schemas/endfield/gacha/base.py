@@ -28,9 +28,9 @@ EndfieldWeaponPoolType = Literal[EndfieldPoolType.WEAPON]
 class EfCharGachaInfo(BaseModel):
     """终末地角色池 - 单条抽卡记录（API 原始响应）"""
 
-    kind: str
+    kind: str = ""
     """类型"""
-    nameText: str
+    nameText: str = ""
     """名称"""
     poolId: str
     """卡池ID"""
@@ -81,9 +81,9 @@ class EfCharGachaInfo(BaseModel):
 class EfWeaponGachaInfo(BaseModel):
     """终末地武器池 - 单条抽卡记录（API 原始响应）"""
 
-    kind: str
+    kind: str = ""
     """类型"""
-    nameText: str
+    nameText: str = ""
     """名称"""
     poolId: str
     """卡池ID"""
@@ -93,7 +93,7 @@ class EfWeaponGachaInfo(BaseModel):
     """武器ID"""
     weaponName: str
     """武器名称"""
-    weaponType: str
+    weaponType: str = ""
     """武器类型"""
     rarity: int
     """稀有度"""

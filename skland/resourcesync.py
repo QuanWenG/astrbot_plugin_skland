@@ -4,6 +4,8 @@ import asyncio
 import json
 import logging
 import os
+import tempfile
+from pathlib import Path
 from typing import Any
 from urllib.parse import quote
 
@@ -11,6 +13,8 @@ import httpx
 
 from . import config as paths
 from .exception import RequestException
+from .download import GitHubDataClient
+from .schemas.endfield.gacha.base import EfGachaContentPool
 from .schemas import (
     CharTable,
     GachaDetails,
@@ -40,6 +44,8 @@ class GameDataRepository:
     SYNC_FILES = FILES + (CHAR_META_FILE,)
 
     def __init__(self) -> None:
+        self._update_lock = asyncio.Lock()
+        self.last_update_messages: list[str] = []
         self.gacha_table: list[GachaTable] = []
         self.gacha_details: list[GachaDetails] = []
         self.character_table: list[CharTable] = []
@@ -53,73 +59,130 @@ class GameDataRepository:
         prefix = paths.config.github_proxy_url
         return f"{prefix}{url}" if prefix else url
 
-    async def load(self, force: bool = False) -> tuple[str | None, int, int]:
+    async def load(self, force: bool = False, *, refresh_metadata: bool = False) -> tuple[str | None, int, int]:
+        if self._update_lock.locked():
+            raise RequestException("数据资源正在更新，请稍后再试")
+        async with self._update_lock:
+            return await self._load(force, refresh_metadata=refresh_metadata)
+
+    async def _load(self, force: bool, *, refresh_metadata: bool):
         root = paths.DATA_DIR
         version_file = root / "version"
-        local = (
-            version_file.read_text("utf-8").strip() if version_file.exists() else None
-        )
+        local = version_file.read_text("utf-8").strip() if version_file.exists() else None
         downloaded = failed = 0
-        try:
-            async with httpx.AsyncClient(timeout=60, follow_redirects=True) as client:
-                version_response = await client.get(self.proxy(self.VERSION))
-                version_response.raise_for_status()
-                remote = version_response.text.strip()
-                missing = any(
-                    not (root / route).exists() for route in self.SYNC_FILES
-                ) or not self.variant_groups_loaded
-                if force or missing or local != remote:
-                    for route in self.SYNC_FILES:
-                        response = await client.get(self.proxy(self.RAW + route))
-                        response.raise_for_status()
-                        target = root / route
-                        target.parent.mkdir(parents=True, exist_ok=True)
-                        temporary = target.with_suffix(target.suffix + ".tmp")
-                        try:
-                            temporary.write_bytes(response.content)
-                            os.replace(temporary, target)
-                        finally:
-                            temporary.unlink(missing_ok=True)
-                        downloaded += 1
-                    version_file.write_text(remote, "utf-8")
-                await self._optional(client, root)
+        messages = []
+        async with GitHubDataClient() as client:
+            try:
+                commit = await client.resolve_commit("yuanyan3060", "ArknightsGameResource", "main")
+                base = f"https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/{commit}/"
+                remote = await client.get_text(base + "version")
+                changed = force or local != remote or not self._has_valid_core_cache(root)
+                batch = {}
+                if changed:
+                    tables = {route: await client.get_json(base + route) for route in self.FILES}
+                    # Validate the complete staged generation before replacing any current file.
+                    self._validate_core(tables)
+                    batch = {root / route: json.dumps(value, ensure_ascii=False).encode() for route, value in tables.items()}
+                    batch[version_file] = remote.encode()
+                if changed or force or not self.variant_groups_loaded:
+                    try:
+                        variants = await client.get_json(base + self.CHAR_META_FILE)
+                        if not self._valid_variant_table(variants):
+                            raise ValueError("异格分组结构无效")
+                        batch[root / self.CHAR_META_FILE] = json.dumps(variants).encode()
+                    except (RequestException, ValueError) as exc:
+                        messages.append(f"异格关系更新失败，保留可用缓存：{exc}")
+                        failed += 1
+                if batch:
+                    replace_batch(batch)
+                    downloaded += sum(path != version_file for path in batch)
                 local = remote
-        except httpx.HTTPError as exc:
-            failed = 1
-            if not all((root / route).exists() for route in self.FILES):
-                raise RequestException(
-                    f"游戏数据下载失败：{type(exc).__name__}: {exc}"
-                ) from exc
-            logger.warning("游戏数据更新失败，使用本地缓存：%s", exc)
+                messages.append("明日方舟数据资源更新成功" if batch else "明日方舟数据资源已是最新")
+            except (RequestException, ValueError, KeyError, TypeError, OSError) as exc:
+                failed += 1
+                messages.append(f"明日方舟更新失败，保留原缓存：{exc}")
+            try:
+                details = await client.get_json(self.DETAILS)
+                for value in details["gachaPoolClient"]:
+                    GachaDetails(**value)
+                replace_batch({root / "gacha_details.json": json.dumps(details, ensure_ascii=False).encode()})
+                messages.append("方舟卡池详情更新成功")
+            except (RequestException, ValueError, KeyError, OSError) as exc:
+                failed += 1
+                messages.append(f"方舟卡池详情更新失败，保留原缓存：{exc}")
+            try:
+                commit = await client.resolve_commit("FrostN0v0", "EndfieldGachaPoolTable", "master")
+                pools = await client.get_json(f"https://raw.githubusercontent.com/FrostN0v0/EndfieldGachaPoolTable/{commit}/GachaPoolTable.json")
+                for value in pools.values():
+                    EfGachaContentPool(**value)
+                if not pools and self.ef_pool_table:
+                    raise ValueError("卡池表为空")
+                payload = json.dumps(pools, ensure_ascii=False).encode()
+                target = root / "endfield" / "GachaPoolTable.json"
+                changed = not target.exists() or target.read_bytes() != payload
+                if changed:
+                    replace_batch({target: payload})
+                self.ef_pool_table = pools
+                messages.append(f"终末地卡池{'更新成功' if changed else '已是最新'}：{len(pools)} 个")
+            except (RequestException, ValueError, OSError) as exc:
+                failed += 1
+                messages.append(f"终末地卡池更新失败，保留原缓存：{exc}")
+        self.last_update_messages = messages
+        for message in messages:
+            logger.info(message)
+        if not all((root / route).exists() for route in self.FILES):
+            raise RequestException("；".join(messages))
         metadata = self._load_operator_metadata()
-        if force or downloaded or metadata is None:
+        if force or refresh_metadata or downloaded or metadata is None:
             try:
                 metadata = await self._refresh_operator_metadata()
+                messages.append("干员筛选元数据更新完成")
             except RequestException as exc:
-                logger.warning("干员筛选元数据更新失败，使用官方档案回退：%s", exc)
+                failed += 1
+                messages.append(f"干员筛选元数据更新失败，保留官方数据：{exc}")
+                logger.warning("干员筛选元数据更新失败，保留官方数据：%s", exc)
         self._parse(metadata)
         self.variant_groups_checked = self.variant_groups_loaded
         return local, downloaded, failed
 
-    async def _optional(self, client: httpx.AsyncClient, root) -> None:
-        details = await client.get(self.DETAILS)
-        details.raise_for_status()
-        (root / "gacha_details.json").write_bytes(details.content)
-        try:
-            response = await client.get(self.proxy(self.EF_POOLS))
-            response.raise_for_status()
-            target = root / "endfield" / "GachaPoolTable.json"
-            target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_bytes(response.content)
-        except httpx.HTTPError as exc:
-            logger.warning("终末地卡池表更新失败：%s", exc)
-
     def load_cached(self) -> bool:
+        self._load_ef_cache()
         if not all((paths.DATA_DIR / route).exists() for route in self.FILES):
             return False
         self._parse(self._load_operator_metadata())
         self.variant_groups_checked = self.variant_groups_loaded
         return True
+
+    @classmethod
+    def _validate_core(cls, tables):
+        if not all(isinstance(tables[route], dict) for route in cls.FILES) or not tables[cls.FILES[1]]:
+            raise ValueError("官方数据表为空或结构无效")
+        for value in tables[cls.FILES[1]].values():
+            CharTable(**value)
+        for value in tables[cls.FILES[0]]["gachaPoolClient"]:
+            GachaTable(**value)
+        OperatorCatalog.from_game_tables(*(tables[route] for route in cls.FILES[1:]))
+
+    @classmethod
+    def _has_valid_core_cache(cls, root):
+        try:
+            cls._validate_core({route: json.loads((root / route).read_text("utf-8")) for route in cls.FILES})
+            return True
+        except (OSError, ValueError, KeyError, TypeError):
+            return False
+
+    def _load_ef_cache(self):
+        ef_file = paths.DATA_DIR / "endfield" / "GachaPoolTable.json"
+        if ef_file.exists():
+            try:
+                pools = json.loads(ef_file.read_text("utf-8"))
+                if not isinstance(pools, dict):
+                    raise ValueError("卡池表结构无效")
+                for value in pools.values():
+                    EfGachaContentPool(**value)
+                self.ef_pool_table = pools
+            except (OSError, ValueError, TypeError) as exc:
+                logger.warning("终末地卡池缓存无效：%s", type(exc).__name__)
 
     @staticmethod
     def _valid_variant_table(value: Any) -> bool:
@@ -174,9 +237,7 @@ class GameDataRepository:
                 self.gacha_details = [
                     GachaDetails(**item) for item in data.get("gachaPoolClient", [])
                 ]
-            ef_file = root / "endfield" / "GachaPoolTable.json"
-            if ef_file.exists():
-                self.ef_pool_table = json.loads(ef_file.read_text("utf-8"))
+            self._load_ef_cache()
             self.operator_catalog = OperatorCatalog.from_game_tables(
                 chars,
                 tables["char_patch_table.json"],
@@ -317,53 +378,73 @@ class GameDataRepository:
 
 
 async def sync_images(force: bool = False, update: bool = False) -> tuple[int, int]:
-    """Synchronize avatar, portrait and skill caches from the upstream resource repo."""
-    api = "https://api.github.com/repos/yuanyan3060/ArknightsGameResource/git/trees/main?recursive=1"
-    headers = (
-        {"Authorization": f"Bearer {paths.config.github_token}"}
-        if paths.config.github_token
-        else {}
-    )
+    if game_data._update_lock.locked():
+        raise RequestException("资源正在更新，请稍后再试")
+    async with game_data._update_lock:
+        return await _sync_images(force, update)
+
+
+async def _sync_images(force: bool = False, update: bool = False) -> tuple[int, int]:
+    async with GitHubDataClient() as client:
+        commit = await client.resolve_commit("yuanyan3060", "ArknightsGameResource", "main")
+        tree = await client.get_json(f"https://api.github.com/repos/yuanyan3060/ArknightsGameResource/git/trees/{commit}?recursive=1")
+        if tree.get("truncated"):
+            raise RequestException("资源目录不完整，请稍后重试")
+        routes = [x["path"] for x in tree.get("tree", []) if x.get("type") == "blob"
+                  and x.get("path", "").split("/", 1)[0] in {"avatar", "portrait", "skill"}]
+        async def download(route):
+            target = paths.CACHE_DIR / route
+            if not target.resolve().is_relative_to(paths.CACHE_DIR.resolve()):
+                raise RequestException("无效资源路径")
+            if target.exists() and not (force or update):
+                return 0, 0
+            try:
+                payload = await client.fetch(f"https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/{commit}/" + quote(route, safe="/"), _validate_image_payload)
+                replace_batch({target: payload})
+                return 1, 0
+            except (RequestException, OSError):
+                return 0, 1
+        results = await asyncio.gather(*(download(route) for route in routes))
+        return sum(x[0] for x in results), sum(x[1] for x in results)
+
+
+def _validate_image_payload(payload):
+    from io import BytesIO
+    from PIL import Image
     try:
-        async with httpx.AsyncClient(
-            timeout=60, follow_redirects=True, headers=headers
-        ) as client:
-            response = await client.get(GameDataRepository.proxy(api))
-            response.raise_for_status()
-            routes = [
-                item["path"]
-                for item in response.json().get("tree", [])
-                if item.get("type") == "blob"
-                and item.get("path", "").split("/", 1)[0]
-                in {"avatar", "portrait", "skill"}
-            ]
-            semaphore = asyncio.Semaphore(16)
-            success = failed = 0
+        with Image.open(BytesIO(payload)) as image:
+            image.verify()
+    except (OSError, ValueError) as exc:
+        raise ValueError("资源图片格式无效") from exc
+    return payload
 
-            async def download(route: str) -> None:
-                nonlocal success, failed
-                target = paths.CACHE_DIR / route
-                if target.exists() and not (force or update):
-                    return
-                async with semaphore:
-                    try:
-                        url = GameDataRepository.proxy(
-                            GameDataRepository.RAW + quote(route, safe="/")
-                        )
-                        payload = await client.get(url)
-                        payload.raise_for_status()
-                        target.parent.mkdir(parents=True, exist_ok=True)
-                        target.write_bytes(payload.content)
-                        success += 1
-                    except httpx.HTTPError:
-                        failed += 1
 
-            await asyncio.gather(*(download(route) for route in routes))
-            return success, failed
-    except httpx.HTTPError as exc:
-        raise RequestException(
-            f"图片资源同步失败：{type(exc).__name__}: {exc}"
-        ) from exc
+def replace_batch(batch: dict[Path, bytes]) -> None:
+    """Rollback on replacement failure; not a crash-atomic multi-file transaction."""
+    originals = {path: path.read_bytes() if path.exists() else None for path in batch}
+    staged = {}
+    replaced = []
+    try:
+        for path, payload in batch.items():
+            path.parent.mkdir(parents=True, exist_ok=True)
+            fd, name = tempfile.mkstemp(dir=path.parent, suffix=".stage")
+            with os.fdopen(fd, "wb") as stream:
+                stream.write(payload)
+            staged[path] = Path(name)
+        for path, temporary in staged.items():
+            os.replace(temporary, path)
+            replaced.append(path)
+    except BaseException:
+        for path in reversed(replaced):
+            payload = originals[path]
+            if payload is None:
+                path.unlink(missing_ok=True)
+            else:
+                path.write_bytes(payload)
+        raise
+    finally:
+        for temporary in staged.values():
+            temporary.unlink(missing_ok=True)
 
 
 game_data = GameDataRepository()

@@ -49,6 +49,20 @@ class QQMessageReceipt:
             return False
 
 
+@dataclass(frozen=True, slots=True)
+class OneBotMessageReceipt:
+    bot: Any
+    message_id: str
+
+    async def recall(self) -> bool:
+        try:
+            await self.bot.call_action("delete_msg", message_id=int(self.message_id))
+            return True
+        except Exception as exc:
+            logger.warning("OneBot 消息撤回失败：%s", type(exc).__name__)
+            return False
+
+
 def _response_message_id(response: Any) -> str | None:
     if isinstance(response, dict):
         value = response.get("id")
@@ -77,13 +91,27 @@ def _receipt_from_event(event: Any, response: Any) -> QQMessageReceipt | None:
     )
 
 
-async def send_with_receipt(event: Any, message_chain: Any) -> QQMessageReceipt | None:
+async def send_with_receipt(event: Any, message_chain: Any) -> QQMessageReceipt | OneBotMessageReceipt | None:
     """Send a QQ message while preserving the response ID for later recall.
 
     AstrBot 4.26's public ``event.send`` method returns ``None``. Its QQ event
     sender does return the qq-botpy response, so this small compatibility layer
     uses that path when available and falls back to the public API otherwise.
     """
+    platform = event.get_platform_name() if hasattr(event, "get_platform_name") else "qq_official"
+    if platform == "aiocqhttp":
+        bot = getattr(event, "bot", None)
+        parse = getattr(event, "_parse_onebot_json", None)
+        if bot is not None and callable(parse):
+            content = await parse(message_chain)
+            group_id = event.get_group_id()
+            route = {"group_id": int(group_id)} if group_id else {"user_id": int(event.get_sender_id())}
+            response = await bot.call_action("send_group_msg" if group_id else "send_private_msg", message=content, **route)
+            message_id = response.get("message_id") if isinstance(response, dict) else None
+            return OneBotMessageReceipt(bot, str(message_id)) if message_id else None
+    if platform != "qq_official":
+        await event.send(message_chain)
+        return None
     post_send = getattr(event, "_post_send", None)
     if not callable(post_send) or not hasattr(event, "send_buffer"):
         await event.send(message_chain)

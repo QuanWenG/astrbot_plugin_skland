@@ -28,6 +28,7 @@ async def test_same_uid_is_distinguished_by_server(tmp_path):
     store = SklandStore(tmp_path / "skland.sqlite3")
     await store.initialize()
     owner_id = "platform:user"
+    await store.save_account(Account(owner_id, None, "cred", "token", "42"))
 
     await store.replace_characters(
         owner_id,
@@ -83,13 +84,9 @@ async def test_initialize_migrates_legacy_character_primary_key(tmp_path):
         columns = db.execute("PRAGMA table_info(characters)").fetchall()
     assert tuple(
         row[1] for row in sorted((row for row in columns if row[5]), key=lambda row: row[5])
-    ) == (
-        "owner_id",
-        "uid",
-        "role_id",
-        "app_code",
-        "channel_master_id",
-    )
+    ) == ("id",)
+    assert preserved[0].isdefault
+    assert len(list(tmp_path.glob("*.bak"))) == 1
 
     await store.replace_characters(
         "platform:user",
@@ -123,6 +120,8 @@ async def test_delete_account_cascades_plugin_data(tmp_path):
 async def test_gacha_deduplication_and_rogue_cache(tmp_path):
     store = SklandStore(tmp_path / "skland.sqlite3")
     await store.initialize()
+    await store.save_account(Account("platform:user", None, "cred", "token", "42"))
+    await store.replace_characters("platform:user", [Character("platform:user", "100", None, "arknights", "1", "博士", True)])
     record = GachaRecord(
         "platform:user",
         "100",

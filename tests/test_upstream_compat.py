@@ -47,3 +47,18 @@ def test_rogue_six_topic_and_assets_are_available():
     resource_dir = Path("skland/resources/images")
     assert (resource_dir / "background/rogue/pic_rogue_6_kv1.png").is_file()
     assert len(list((resource_dir / "rogue/band/rogue_6").glob("*.png"))) == 22
+
+
+def test_filters_follow_configured_runtime_cache_paths(tmp_path, monkeypatch):
+    from skland import config as paths
+    from skland.filters import charId_to_avatarUrl, ark_skin_portrait_url, ark_skill_icon_url
+    for name in ("PLUGIN_DATA_DIR", "CACHE_DIR", "DATA_DIR", "GACHA_DATA_PATH", "OPERATOR_METADATA_PATH"):
+        monkeypatch.setattr(paths, name, getattr(paths, name))
+    paths.configure_paths(tmp_path)
+    for name in ("avatar/char.png", "portrait/char_skin.png", "skill/skill_icon_skill.png"):
+        path = tmp_path / "cache" / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(b"cached")
+    assert charId_to_avatarUrl("char") == (tmp_path / "cache/avatar/char.png").as_uri()
+    assert ark_skin_portrait_url("char@skin") == (tmp_path / "cache/portrait/char_skin.png").as_uri()
+    assert ark_skill_icon_url("skill") == (tmp_path / "cache/skill/skill_icon_skill.png").as_uri()

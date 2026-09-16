@@ -117,8 +117,7 @@ class OperatorMetadataSnapshot(BaseModel):
     operators: tuple[OperatorMetadata, ...] = ()
 
     @model_validator(mode="after")
-    @classmethod
-    def ensure_unique_char_ids(cls, values: Any) -> Any:
+    def ensure_unique_char_ids(values: Any) -> Any:
         operators = values.get("operators", ()) if isinstance(values, dict) else values.operators
         char_ids = [operator.char_id for operator in operators]
         if not all(char_ids):

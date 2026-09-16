@@ -8,6 +8,7 @@ class Account:
     cred: str
     cred_token: str
     user_id: str | None
+    id: int | None = None
 
 
 @dataclass(slots=True)
@@ -19,6 +20,18 @@ class Character:
     channel_master_id: str
     nickname: str
     isdefault: bool = False
+    id: int | None = None
+    account_id: int | None = None
+    server_name: str = ""
+    level: int | None = None
+    is_available: bool = True
+    is_skland_default: bool = False
+
+    @property
+    def display_server(self) -> str:
+        return self.server_name or {"1": "官服", "2": "B服"}.get(
+            self.channel_master_id, f"未知区服（{self.channel_master_id}）"
+        )
 
 
 @dataclass(slots=True)
@@ -36,3 +49,4 @@ class GachaRecord:
     is_free: bool
     gacha_ts: int
     pos: int
+    character_id: int | None = None

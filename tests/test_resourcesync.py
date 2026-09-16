@@ -63,6 +63,13 @@ def test_legacy_core_cache_loads_without_optional_variant_table(
     assert not repository.variant_groups_checked
 
 
+def test_corrupt_core_cache_requires_repair(data_paths):
+    _write_core_cache(data_paths)
+    assert GameDataRepository._has_valid_core_cache(data_paths)
+    (data_paths / GameDataRepository.FILES[1]).write_text("{}", "utf-8")
+    assert not GameDataRepository._has_valid_core_cache(data_paths)
+
+
 @pytest.mark.asyncio
 async def test_same_version_fetches_missing_optional_variant_table(
     data_paths: Path,
@@ -109,6 +116,10 @@ async def test_same_version_fetches_missing_optional_variant_table(
             self.urls.append(url)
             return Response(payloads[url])
 
+    commit = "a" * 40
+    payloads = {url.replace("/main/", f"/{commit}/").replace("/master/", f"/{commit}/"): content for url, content in payloads.items()}
+    for owner, repo, branch in [("yuanyan3060", "ArknightsGameResource", "main"), ("FrostN0v0", "EndfieldGachaPoolTable", "master")]:
+        payloads[f"https://api.github.com/repos/{owner}/{repo}/git/ref/heads/{branch}"] = json.dumps({"object": {"sha": commit, "type": "commit"}}).encode()
     client = Client()
     monkeypatch.setattr(
         resourcesync.httpx,
@@ -124,10 +135,10 @@ async def test_same_version_fetches_missing_optional_variant_table(
 
     version, downloaded, failed = await repository.load()
 
-    variant_url = GameDataRepository.RAW + GameDataRepository.CHAR_META_FILE
+    variant_url = GameDataRepository.RAW.replace("/main/", f"/{commit}/") + GameDataRepository.CHAR_META_FILE
     assert (version, downloaded, failed) == (
         "same",
-        len(GameDataRepository.SYNC_FILES),
+        1,
         0,
     )
     assert variant_url in client.urls
@@ -165,7 +176,7 @@ async def test_offline_load_falls_back_to_legacy_core_cache(
 
     version, downloaded, failed = await repository.load()
 
-    assert (version, downloaded, failed) == ("same", 0, 1)
+    assert (version, downloaded, failed) == ("same", 0, 4)
     assert repository.operator_catalog.by_id["char_alt"].variant_group_id == ""
     # Keep the optional table retryable after an offline core-cache fallback.
     assert not repository.variant_groups_checked

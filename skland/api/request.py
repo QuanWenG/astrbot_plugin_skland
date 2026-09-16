@@ -5,7 +5,7 @@ import json
 import logging
 from datetime import datetime
 from typing import Literal
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlencode
 
 import httpx
 from pydantic import TypeAdapter
@@ -26,6 +26,7 @@ from ..schemas import (
     GachaCate,
     GachaResponse,
     RogueData,
+    WarEchoes,
 )
 
 logger = logging.getLogger("astrbot")
@@ -476,3 +477,38 @@ class SklandAPI:
                 return EndfieldCard(**response.json()["data"]["detail"])
             except httpx.HTTPError as e:
                 raise RequestException(f"获取终末地角色卡片失败: {e}") from e
+
+
+    @classmethod
+    async def endfield_war_echoes(
+        cls,
+        cred: CRED,
+        *,
+        user_id: str,
+        role_id: str,
+        server_id: str,
+        season_id: str | int | None = None,
+    ) -> WarEchoes:
+        """Fetch Endfield War Echoes data using scalar account identity."""
+        query = {
+            "roleId": role_id,
+            "serverId": server_id,
+            "userId": user_id,
+        }
+        if season_id is not None:
+            query["seasonId"] = str(season_id)
+        request_url = f"{base_url}/game/endfield/card/war-echoes?{urlencode(query)}"
+        headers = await cls.get_sign_header(cred, request_url, method="get")
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.get(request_url, headers=headers)
+                data = response.json()
+                if status := data.get("code"):
+                    if status == 10000:
+                        raise UnauthorizedException(f"获取终末地战争回响失败：{data.get('message')}")
+                    if status == 10002:
+                        raise LoginException(f"获取终末地战争回响失败：{data.get('message')}")
+                    raise RequestException(f"获取终末地战争回响失败：{data.get('message')}")
+                return WarEchoes(**data["data"]["warEchoes"])
+            except httpx.HTTPError as e:
+                raise RequestException(f"获取终末地战争回响失败: {e}") from e
