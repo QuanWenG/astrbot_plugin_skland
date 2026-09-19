@@ -38,6 +38,7 @@ ADAPTATIONS = {
     "services/resources.py": ("启动、手动和每日更新共用互斥服务", ["skland/resourcesync.py"]),
     "services/sign.py": ("双游戏按角色签到，保留中文命令与管理员全体入口", ["skland/service.py", "skland/store.py", "main.py"]),
     "schemas/sign.py": ("签到结果采用本地角色主键记录及结构化模型", ["skland/store.py", "skland/schemas/sign.py"]),
+    "schemas/endfield/gacha/base.py": ("保留武器可选字段兼容；过滤武器礼盒与角色附加条目，保留原始分页游标，空抽卡页继续同步并拒绝异常游标", ["skland/schemas/endfield/gacha/base.py", "skland/service.py", "tests/test_ef_gacha_response.py"]),
 }
 
 

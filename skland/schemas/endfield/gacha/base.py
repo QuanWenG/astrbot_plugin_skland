@@ -134,26 +134,48 @@ class EfWeaponGachaInfo(BaseModel):
 EfGachaInfo = EfCharGachaInfo | EfWeaponGachaInfo
 
 
+def _with_raw_page_cursor(values: Any) -> Any:
+    """Keep the API page boundary before removing non-pull entries."""
+    if not isinstance(values, dict):
+        return values
+    values = dict(values)
+    rows = values.get("list")
+    if isinstance(rows, list):
+        last = rows[-1] if rows else {}
+        for field, key in (("raw_next_seq", "seqId"), ("raw_next_ts", "gachaTs")):
+            value = last.get(key) if isinstance(last, dict) else getattr(last, key, None)
+            values[field] = str(value) if value is not None else ""
+    return values
+
+
 class EfCharGachaResponse(BaseModel):
     """终末地角色池抽卡响应"""
 
     gacha_list: list[EfCharGachaInfo] = Field(default=[], alias="list")
     hasMore: bool
+    raw_next_seq: str | None = Field(default=None, exclude=True)
+    raw_next_ts: str | None = Field(default=None, exclude=True)
 
     @property
     def next_ts(self) -> str:
+        if self.raw_next_ts is not None:
+            return self.raw_next_ts
         return self.gacha_list[-1].gachaTs if self.gacha_list else ""
 
     @property
     def next_seq(self) -> str:
+        if self.raw_next_seq is not None:
+            return self.raw_next_seq
         return self.gacha_list[-1].seqId if self.gacha_list else ""
 
     @model_validator(mode="before")
     @classmethod
     def draws_filter(cls, values) -> Any:
-        if "list" in values:
+        values = _with_raw_page_cursor(values)
+        if isinstance(values, dict) and isinstance(values.get("list"), list):
             values["list"] = [
-                draw for draw in values["list"] if draw.get("kind") == "draw"
+                draw for draw in values["list"]
+                if not isinstance(draw, dict) or draw.get("kind", "draw") in ("", "draw")
             ]
         return values
 
@@ -163,14 +185,33 @@ class EfWeaponGachaResponse(BaseModel):
 
     gacha_list: list[EfWeaponGachaInfo] = Field(default=[], alias="list")
     hasMore: bool
+    raw_next_seq: str | None = Field(default=None, exclude=True)
+    raw_next_ts: str | None = Field(default=None, exclude=True)
 
     @property
     def next_ts(self) -> str:
+        if self.raw_next_ts is not None:
+            return self.raw_next_ts
         return self.gacha_list[-1].gachaTs if self.gacha_list else ""
 
     @property
     def next_seq(self) -> str:
+        if self.raw_next_seq is not None:
+            return self.raw_next_seq
         return self.gacha_list[-1].seqId if self.gacha_list else ""
+
+    @model_validator(mode="before")
+    @classmethod
+    def draws_filter(cls, values) -> Any:
+        values = _with_raw_page_cursor(values)
+        if isinstance(values, dict) and isinstance(values.get("list"), list):
+            # A gift box has no weapon/rarity fields and is not a weapon pull.
+            # Other entries still undergo strict validation; do not invent data.
+            values["list"] = [
+                draw for draw in values["list"]
+                if not isinstance(draw, dict) or draw.get("kind") != "giftweaponbox"
+            ]
+        return values
 
 
 EfGachaResponse = EfCharGachaResponse | EfWeaponGachaResponse

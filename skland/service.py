@@ -572,11 +572,13 @@ class SklandService:
             pool_type, char.channel_master_id, token
         )
         seen = set()
-        while page and page.gacha_list:
+        while page is not None:
             records.extend(page.gacha_list)
             cursor = page.next_seq
-            if not page.hasMore or cursor in seen:
+            if not page.hasMore:
                 break
+            if not cursor or cursor in seen:
+                raise RequestException("抽卡记录翻页游标缺失或重复，无法确认历史完整性，请稍后重试")
             seen.add(cursor)
             page = await SklandAPI.get_ef_gacha_history(
                 pool_type, char.channel_master_id, token, seq_id=cursor
