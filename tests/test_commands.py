@@ -45,6 +45,7 @@ def test_all_source_shortcuts_are_registered():
         "ef",
         "zmd",
         "方舟干员",
+        "理智订阅", "理智取消", "理智订阅状态", "理智提醒测试",
     }
     assert expected <= registered
 
@@ -56,10 +57,11 @@ def test_rendered_cards_are_sent_as_native_image_bytes():
     assert "event.plain_result(content)" not in source
 
 
-def test_qrcode_reply_mentions_sender_name():
+def test_registration_commands_are_removed():
     source = Path("main.py").read_text("utf-8")
-    assert "event.get_sender_name()" in source
-    assert "{sender_name} 请使用森空岛 App 扫码" in source
+    assert 'filter.command("森空岛登记")' not in source
+    assert 'filter.command("森空岛白名单")' not in source
+    assert 'filter.command("森空岛撤销登记")' not in source
 
 
 def test_box_renders_only_the_requested_page():

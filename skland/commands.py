@@ -45,5 +45,5 @@ def validate_shortcut(name: str, argv: list[str], reserved: set[str], existing: 
         raise ValueError("不能覆盖内置快捷指令")
     if not argv or argv[0] in {"shortcut", "--shortcut", "sk", "skland", name} or argv[0] in existing:
         raise ValueError("快捷指令必须直接指向森空岛子命令，不能递归展开")
-    if argv[0] not in {"bind", "qrcode", "unbind", "char", "card", "efcard", "box", "clue", "rogue", "rginfo", "gacha", "efgacha", "efwar", "import", "arksign", "efsign", "sync", "background", "help"}:
+    if argv[0] not in {"bind", "qrcode", "unbind", "char", "card", "efcard", "box", "clue", "rogue", "rginfo", "gacha", "efgacha", "efwar", "import", "arksign", "efsign", "sync", "background", "help", "sanity", "version", "版本"}:
         raise ValueError("未知森空岛子命令")

@@ -29,53 +29,51 @@ async def plugin(tmp_path):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("choice,saved", [("确认", True), ("取消", False), (None, False)])
-async def test_preview_confirmation_cancel_timeout(plugin, choice, saved):
+@pytest.mark.parametrize("secret", ["x" * 24, "x" * 32])
+@pytest.mark.parametrize("group", ["", "123"])
+async def test_binding_saves_without_confirmation_or_rendering(plugin, secret, group):
     obj, ns = plugin
     account = Account("bot:u", None, "cred", "token", "remote")
     role = Character("bot:u", "100", None, "arknights", "1", "博士")
     prepared = PreparedBinding(account, [role], 0, object())
     obj.service.bindings.prepare = AsyncMock(return_value=prepared)
-    ns["render_bound_roles_card"] = AsyncMock(return_value=PNG)
-    async def confirm(*args, **kwargs):
-        # The preview cannot open a transaction or save credentials before user confirmation.
-        assert await obj.store.list_accounts("bot:u") == []
-        return choice
-    ns["wait_choice"] = confirm
-    results = await run(obj, Event(), ["bind", "x" * 32])
+    ns["render_bound_roles_card"] = AsyncMock(side_effect=RenderError("failed"))
+    ns["wait_choice"] = AsyncMock(side_effect=AssertionError("unexpected confirmation"))
+    event = Event(group=group)
+    results = await run(obj, event, ["bind", secret])
     assert not texts(results)
-    assert bool(await obj.store.list_accounts("bot:u")) is saved
+    assert (await obj.store.list_accounts("bot:u"))[0].user_id == "remote"
+    assert (await obj.store.get_characters("bot:u"))[0].uid == "100"
+    assert "绑定成功" in texts([call.args[0] for call in event.send.await_args_list])
+    obj.service.bindings.prepare.assert_awaited_once_with("bot:u", secret)
+    ns["wait_choice"].assert_not_awaited()
+    ns["render_bound_roles_card"].assert_not_awaited()
 
 
 @pytest.mark.asyncio
-async def test_render_failure_and_changed_state_never_commit(plugin):
+async def test_auth_failure_and_changed_state_never_commit(plugin):
     obj, ns = plugin
+    obj.service.bindings.prepare = AsyncMock(side_effect=ValueError("认证失败"))
+    assert "认证失败" in texts(await run(obj, Event(), ["bind", "x" * 32]))
+    assert await obj.store.list_accounts("bot:u") == []
     account = Account("bot:u", None, "cred", "token", "remote")
     prepared = PreparedBinding(account, [], 0, object())
-    obj.service.bindings.prepare = AsyncMock(return_value=prepared)
-    ns["render_bound_roles_card"] = AsyncMock(side_effect=RenderError("failed"))
-    assert "failed" in texts(await run(obj, Event(), ["bind", "x" * 32]))
-    assert await obj.store.list_accounts("bot:u") == []
-    ns["render_bound_roles_card"] = AsyncMock(return_value=PNG)
     async def changed(*args, **kwargs):
-        await add_account(obj.store)
-        return "确认"
-    ns["wait_choice"] = changed
+        await add_account(obj.store, "existing-remote")
+        return prepared
+    obj.service.bindings.prepare = changed
     assert "已变化" in texts(await run(obj, Event(), ["bind", "x" * 32]))
-    assert len(await obj.store.list_accounts("bot:u")) == 1
+    assert [a.user_id for a in await obj.store.list_accounts("bot:u")] == ["existing-remote"]
 
 
 @pytest.mark.asyncio
-async def test_owner_management_mutex_and_group_permission(plugin):
+async def test_owner_management_mutex_and_open_group_binding(plugin):
     obj, ns = plugin
-    obj._confirm_binding = AsyncMock()
+    obj._bind_account = AsyncMock()
     async with obj.service.bindings.exclusive("bot:u"):
         assert "进行中" in texts(await run(obj, Event(), ["bind", "secret"]))
-    assert "白名单" in texts(await run(obj, Event(group="123"), ["bind", "secret"]))
-    obj._confirm_binding.assert_not_awaited()
-    await obj.store.register_credential_group("bot:GroupMessage:123", entry_umo="bot:GroupMessage:entry", registered_by="bot:u")
     await run(obj, Event(group="123"), ["bind", "secret"])
-    obj._confirm_binding.assert_awaited_once()
+    obj._bind_account.assert_awaited_once()
 
 
 @pytest.mark.asyncio

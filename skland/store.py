@@ -9,11 +9,10 @@ from pathlib import Path
 
 import aiosqlite
 
-from .access import validate_group_sid
-from .models import Account, Character, GachaRecord
+from .models import Account, Character, GachaRecord, SanitySubscription
 
 logger = logging.getLogger("astrbot")
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
 DDL = (
     """CREATE TABLE accounts (id INTEGER PRIMARY KEY AUTOINCREMENT, owner_id TEXT NOT NULL,
     access_token TEXT, cred TEXT NOT NULL, cred_token TEXT NOT NULL, user_id TEXT, UNIQUE(owner_id,user_id))""",
@@ -42,10 +41,17 @@ DDL = (
 )
 
 
-REGISTRATION_DDL = """CREATE TABLE credential_groups (
-    target_sid TEXT PRIMARY KEY, legacy_match INTEGER NOT NULL DEFAULT 0,
-    entry_umo TEXT NOT NULL, registered_by TEXT NOT NULL, registered_at TEXT NOT NULL
-)"""
+SUBSCRIPTION_DDL = (
+    """CREATE TABLE sanity_subscriptions (
+    owner_id TEXT NOT NULL, character_id INTEGER NOT NULL REFERENCES characters(id) ON DELETE CASCADE,
+    private_umo TEXT NOT NULL, advance_minutes INTEGER NOT NULL DEFAULT 10 CHECK(advance_minutes>=0),
+    notified INTEGER NOT NULL DEFAULT 0, blocked INTEGER NOT NULL DEFAULT 0,
+    retry_at REAL NOT NULL DEFAULT 0, last_error TEXT NOT NULL DEFAULT '',
+    last_checked REAL NOT NULL DEFAULT 0, current INTEGER, maximum INTEGER,
+    full_at REAL, last_notified REAL, revision INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY(owner_id,character_id))""",
+    "CREATE TABLE private_sessions (owner_id TEXT PRIMARY KEY,private_umo TEXT NOT NULL)",
+)
 
 
 class SklandStore:
@@ -65,13 +71,13 @@ class SklandStore:
                 await db.rollback()
                 raise
 
-    async def initialize(self, *, legacy_credential_groups=()) -> None:
+    async def initialize(self) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         async with self.connection() as db:
             version = (await (await db.execute("PRAGMA user_version")).fetchone())[0]
             if version == SCHEMA_VERSION:
                 return
-            if version not in (0, 3):
+            if version not in (0, 3, 4):
                 raise RuntimeError(f"不支持的数据库版本：{version}，请保留原库")
             tables = {row[0] for row in await (await db.execute(
                 "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
@@ -80,7 +86,7 @@ class SklandStore:
                 raise RuntimeError("未知数据库结构，未执行迁移")
             if tables:
                 backup = self.path.with_name(
-                    self.path.name + ".pre-v4-" + datetime.now().strftime("%Y%m%d%H%M%S%f") + ".bak"
+                    self.path.name + ".pre-v5-" + datetime.now().strftime("%Y%m%d%H%M%S%f") + ".bak"
                 )
                 async with aiosqlite.connect(backup) as destination:
                     await db.backup(destination)
@@ -99,64 +105,63 @@ class SklandStore:
                     await db.execute(statement)
                 if old:
                     await self._migrate(db, old)
-            await db.execute(REGISTRATION_DDL)
-            # user_version is the durable one-time marker, including an empty
-            # migration. Old configuration must never resurrect revoked rows.
-            legacy = sorted({str(value).strip() for value in (legacy_credential_groups or ()) if str(value).strip()})
-            await db.executemany(
-                "INSERT INTO credential_groups VALUES (?,1,'','legacy-config',?)",
-                [(sid, datetime.now().isoformat()) for sid in legacy],
-            )
-            self.migration_summary["credential_groups"] = len(legacy)
+            await self._upgrade_subscriptions(db)
             await db.execute(f"PRAGMA user_version={SCHEMA_VERSION}")
         if self.migration_summary:
             logger.info("森空岛数据库迁移：%s", self.migration_summary)
 
-    async def credential_group_allowed(self, group_id: str, umo: str) -> bool:
-        async with self.connection() as db:
-            row = await (await db.execute(
-                "SELECT 1 FROM credential_groups WHERE target_sid=? OR (legacy_match=1 AND target_sid=?)",
-                (umo, group_id),
-            )).fetchone()
-            return row is not None
+    async def _upgrade_subscriptions(self, db) -> None:
+        await db.execute("DROP TABLE IF EXISTS credential_groups")
+        for statement in SUBSCRIPTION_DDL:
+            await db.execute(statement)
 
-    async def register_credential_group(self, target_sid: str, *, entry_umo: str, registered_by: str) -> bool:
-        sid = validate_group_sid(target_sid)
-        group_id = sid.split(":", 2)[2]
+    async def private_session(self, owner_id: str) -> str | None:
+        async with self.connection() as db:
+            row = await (await db.execute("SELECT private_umo FROM private_sessions WHERE owner_id=?", (owner_id,))).fetchone()
+            return row[0] if row else None
+
+    async def remember_private_session(self, owner_id: str, private_umo: str) -> None:
+        async with self.connection() as db:
+            await db.execute("INSERT INTO private_sessions VALUES (?,?) ON CONFLICT(owner_id) DO UPDATE SET private_umo=excluded.private_umo", (owner_id, private_umo))
+            await db.execute("UPDATE sanity_subscriptions SET private_umo=?,revision=revision+1 WHERE owner_id=? AND private_umo<>?", (private_umo, owner_id, private_umo))
+
+    async def subscribe_sanity(self, owner_id: str, character_id: int, private_umo: str, advance_minutes: int = 10) -> None:
+        if not isinstance(advance_minutes, int) or advance_minutes < 0:
+            raise ValueError("提前分钟须为非负整数")
+        if advance_minutes > 2**63 - 1:
+            raise ValueError("提前分钟数值过大")
         async with self.connection() as db:
             await db.execute("BEGIN IMMEDIATE")
-            existing = await (await db.execute(
-                "SELECT 1 FROM credential_groups WHERE target_sid=? OR (legacy_match=1 AND target_sid=?)",
-                (sid, group_id),
-            )).fetchone()
-            if existing:
-                return False
-            await db.execute(
-                "INSERT INTO credential_groups VALUES (?,0,?,?,?)",
-                (sid, entry_umo, registered_by, datetime.now().isoformat()),
-            )
-            return True
+            if not await (await db.execute("SELECT 1 FROM characters WHERE id=? AND owner_id=? AND is_available=1", (character_id, owner_id))).fetchone():
+                raise ValueError("角色已不可用，请重新查看 /sk char")
+            await db.execute("""INSERT INTO sanity_subscriptions(owner_id,character_id,private_umo,advance_minutes)
+                VALUES (?,?,?,?) ON CONFLICT(owner_id,character_id) DO UPDATE SET
+                private_umo=excluded.private_umo,advance_minutes=excluded.advance_minutes,revision=revision+1""",
+                (owner_id, character_id, private_umo, advance_minutes))
 
-    async def list_credential_groups(self) -> list[dict]:
+    async def list_sanity_subscriptions(self, owner_id: str | None = None) -> list[SanitySubscription]:
         async with self.connection() as db:
-            return [dict(row) for row in await (await db.execute(
-                "SELECT * FROM credential_groups ORDER BY registered_at,target_sid"
-            )).fetchall()]
+            sql = "SELECT * FROM sanity_subscriptions"
+            rows = await (await db.execute(sql + (" WHERE owner_id=?" if owner_id is not None else "") + " ORDER BY owner_id,character_id", (owner_id,) if owner_id is not None else ())).fetchall()
+            return [SanitySubscription(**dict(row)) for row in rows]
 
-    async def revoke_credential_group(self, target_sid: str) -> bool:
-        target = target_sid.strip()
-        # Removing a full SID must also remove a legacy bare-ID rule that
-        # would otherwise keep granting access to the same target.
-        try:
-            legacy_id = validate_group_sid(target).split(":", 2)[2]
-        except ValueError:
-            legacy_id = target
+    async def update_sanity_subscription(self, subscription: SanitySubscription, **changes) -> bool:
+        allowed = {"notified", "blocked", "retry_at", "last_error", "last_checked", "current", "maximum", "full_at", "last_notified"}
+        if not changes or changes.keys() - allowed:
+            raise ValueError("无效订阅状态字段")
         async with self.connection() as db:
-            cursor = await db.execute(
-                "DELETE FROM credential_groups WHERE target_sid=? OR (legacy_match=1 AND target_sid=?)",
-                (target, legacy_id),
-            )
+            cursor = await db.execute("UPDATE sanity_subscriptions SET " + ",".join(f"{key}=?" for key in changes) + " WHERE owner_id=? AND character_id=? AND revision=?",
+                (*changes.values(), subscription.owner_id, subscription.character_id, subscription.revision))
             return cursor.rowcount > 0
+
+    async def unsubscribe_sanity(self, owner_id: str, game: str, character_id: int | None = None) -> int:
+        async with self.connection() as db:
+            sql = "DELETE FROM sanity_subscriptions WHERE owner_id=? AND character_id IN (SELECT id FROM characters WHERE owner_id=? AND app_code=?)"
+            params = [owner_id, owner_id, game]
+            if character_id is not None:
+                sql += " AND character_id=?"
+                params.append(character_id)
+            return (await db.execute(sql, params)).rowcount
 
     async def _migrate(self, db, old: dict) -> None:
         accounts = {r["owner_id"]: r for r in old.get("accounts", [])}
@@ -256,6 +261,20 @@ class SklandStore:
             rows = await (await db.execute("SELECT * FROM accounts" + (" WHERE owner_id=?" if owner_id is not None else "") + " ORDER BY id",
                 (owner_id,) if owner_id is not None else ())).fetchall()
             return [Account(**dict(row)) for row in rows]
+
+    async def filter_bound_owners(self, owner_ids: list[str]) -> list[str]:
+        """Filter caller-scoped IDs without exporting account or credential rows."""
+        if not isinstance(owner_ids, list) or any(not isinstance(owner, str) or not owner.strip() for owner in owner_ids):
+            raise ValueError("候选用户 ID 列表无效")
+        candidates = list(dict.fromkeys(owner_ids))
+        bound = set()
+        async with self.connection() as db:
+            for index in range(0, len(candidates), 400):
+                chunk = candidates[index:index + 400]
+                rows = await (await db.execute("SELECT DISTINCT owner_id FROM accounts WHERE owner_id IN ("
+                    + ",".join("?" for _ in chunk) + ")", chunk)).fetchall()
+                bound.update(row["owner_id"] for row in rows)
+        return [owner for owner in candidates if owner in bound]
 
     async def delete_account(self, owner_id: str, account_ids: list[int] | None = None, *, expected_version=None) -> bool:
         async with self.connection() as db:

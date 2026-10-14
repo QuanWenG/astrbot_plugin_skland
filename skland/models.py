@@ -50,3 +50,21 @@ class GachaRecord:
     gacha_ts: int
     pos: int
     character_id: int | None = None
+
+
+@dataclass(slots=True)
+class SanitySubscription:
+    owner_id: str
+    character_id: int
+    private_umo: str
+    advance_minutes: int = 10
+    notified: bool = False
+    blocked: bool = False
+    retry_at: float = 0
+    last_error: str = ""
+    last_checked: float = 0
+    current: int | None = None
+    maximum: int | None = None
+    full_at: float | None = None
+    last_notified: float | None = None
+    revision: int = 0

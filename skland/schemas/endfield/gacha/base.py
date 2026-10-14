@@ -209,7 +209,7 @@ class EfWeaponGachaResponse(BaseModel):
             # Other entries still undergo strict validation; do not invent data.
             values["list"] = [
                 draw for draw in values["list"]
-                if not isinstance(draw, dict) or draw.get("kind") != "giftweaponbox"
+                if not isinstance(draw, dict) or draw.get("kind") not in ("gift_weapon_box", "giftweaponbox")
             ]
         return values
 

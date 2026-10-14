@@ -1,5 +1,6 @@
 import asyncio
 import shlex
+from pathlib import Path
 from collections.abc import AsyncGenerator
 from contextlib import suppress
 from datetime import datetime, timedelta
@@ -10,7 +11,6 @@ from astrbot.api.message_components import At, Image, Plain, Reply
 from astrbot.api.star import Context, Star, StarTools, register
 from astrbot.core.star.filter.command import GreedyStr
 
-from .skland.access import CredentialCommandAccessPolicy, validate_group_sid
 from .skland.support_integration import import_support_after_login
 from .skland.api import SklandLoginAPI
 from .skland.cards import (
@@ -34,7 +34,8 @@ from .skland.image_output import ImageDeliveryError, image_output
 from .skland.operator_snapshot import build_operator_snapshot
 from .skland.resourcesync import game_data, sync_images
 from .skland.qrcode_card import fetch_user_avatar, render_qrcode_card
-from .skland.qq_message import send_with_receipt
+from .skland.qq_message import send_with_receipt, send_private_text
+from .skland.sanity import SanityMonitor, GAME_NAMES, GAME_ALIASES, PRIVATE_HINT, sanity_details, format_sanity_time, recovered_data_error
 from .skland.service import ARKNIGHTS, ENDFIELD, SklandService
 from .skland.background import resolve_background, background_bytes
 from .skland.commands import take_role, take_option, validate_shortcut
@@ -44,10 +45,12 @@ from .skland.card_cache import ark_card_cache
 from pydantic import TypeAdapter
 from .skland.store import SklandStore
 
+PLUGIN_VERSION = "2.7.6"
+
 HELP = """森空岛助手（sk / skland）
-登记：在登记入口群发送 /森空岛登记 <目标群完整SID>，为目标群开通登录
-白名单管理（管理员）：/森空岛白名单｜/森空岛撤销登记 <SID或迁移群ID>
-绑定：森空岛绑定 <token|cred>｜扫码绑定/扫码登录｜森空岛解绑（均需确认）
+绑定：森空岛绑定 <token|cred>｜扫码绑定/扫码登录｜森空岛解绑（所有群聊、私聊可用，绑定成功后直接保存，解绑需确认）
+理智：理智订阅 [方舟|终末地] [提前分钟] [-r 序号]（默认提前10分钟）
+      理智取消 [方舟|终末地] [-r 序号|--all]｜理智订阅状态｜理智提醒测试
 角色：/sk char｜/sk char set ark|ef <序号>｜角色更新
 查询：/sk card｜/sk efcard [-a] [-s]；查询、签到、导入可加 -r <角色序号>
 签到：明日方舟签到｜签到详情｜终末地签到｜终末地签到详情
@@ -55,15 +58,16 @@ HELP = """森空岛助手（sk / skland）
 抽卡：方舟抽卡记录 [-b 起始] [-l 结束]｜导入抽卡记录 <URL>
       终末地抽卡记录 [-b 起始] [-l 结束]（自动更新，可用负数切片）
 战争回响：/sk efwar [-s 赛季] [-w 轮换] [-r 角色]（负数赛季回溯）
-其他：/sk clue｜/sk background（支持引用查询图片）｜资源更新｜/sk help
+其他：/sk clue｜/sk background（支持引用查询图片）｜资源更新｜/sk help｜/sk version（部署检查）
 干员：方舟干员 [@用户] [筛选词...]｜/sk box [筛选词] [页码]
 管理员：全体签到｜全体签到详情｜终末地全体签到｜全体角色更新
 动态快捷指令：/sk shortcut add <名称> <子命令及参数>｜list｜remove <名称>"""
 
 BUILTIN_COMMANDS = {
-    "register", "whitelist", "unregister", "森空岛登记", "森空岛白名单", "森空岛撤销登记",
     "sk", "skland", "bind", "qrcode", "unbind", "char", "card", "efcard", "box", "clue",
     "rogue", "rginfo", "gacha", "efgacha", "efwar", "import", "arksign", "efsign", "sync", "background", "help",
+    "sanity", "理智订阅", "理智取消", "理智订阅状态", "理智提醒测试",
+    "version", "版本",
     "森空岛绑定", "扫码绑定", "扫码登录", "森空岛解绑", "明日方舟签到", "签到详情", "全体签到", "全体签到详情",
     "终末地签到", "终末地签到详情", "终末地全体签到", "终末地全体签到详情", "角色更新", "全体角色更新", "资源更新",
     "方舟抽卡记录", "导入抽卡记录", "终末地抽卡记录", "终末地抽卡更新", "ef", "zmd", "战绩详情", "方舟干员", "收藏战绩详情",
@@ -72,7 +76,7 @@ BUILTIN_COMMANDS = {
 
 
 @register(
-    "astrbot_plugin_skland", "AoiNyanko", "森空岛明日方舟/终末地查询与签到插件", "2.4.0"
+    "astrbot_plugin_skland", "AoiNyanko", "森空岛明日方舟/终末地查询与签到插件", PLUGIN_VERSION
 )
 class SklandPlugin(Star):
     def __init__(self, context: Context, config: AstrBotConfig):
@@ -84,6 +88,8 @@ class SklandPlugin(Star):
         self._daily_task: asyncio.Task | None = None
         self._resource_task: asyncio.Task | None = None
         self._startup_task: asyncio.Task | None = None
+        self._sanity_task: asyncio.Task | None = None
+        self._sanity_monitor = SanityMonitor(self.store, self.service, self._send_private_reminder)
         self._interaction_tasks: set[asyncio.Task] = set()
         self._shortcuts: dict[str, list[str]] = {}
 
@@ -132,15 +138,15 @@ class SklandPlugin(Star):
         renderer.configure(
             self.data_dir, str(self.config.get("browser_executable", ""))
         )
-        await self.store.initialize(
-            legacy_credential_groups=self.config.get("credential_group_whitelist", [])
-        )
+        await self.store.initialize()
         try:
-            game_data.load_cached()
+            await asyncio.to_thread(game_data.load_cached)
         except (SklandError, ValueError, OSError) as exc:
             logger.warning("本地资源缓存需要更新：%s", exc)
         self._shortcuts = await self.store.shortcuts()
-        self._startup_task = asyncio.create_task(self._startup_resources())
+        if self.config.get("startup_update_resources", False):
+            self._startup_task = asyncio.create_task(self._startup_resources())
+        self._sanity_task = asyncio.create_task(self._sanity_monitor.run())
         if self.config.get("auto_update_resources", True):
             self._resource_task = asyncio.create_task(self._daily_resource_loop())
         if self.config.get("auto_sign", False):
@@ -148,12 +154,20 @@ class SklandPlugin(Star):
         logger.info("astrbot_plugin_skland initialized with image rendering")
 
     async def terminate(self) -> None:
-        tasks = {t for t in (self._daily_task, self._resource_task, self._startup_task) if t}
+        tasks = {t for t in (self._daily_task, self._resource_task, self._startup_task, self._sanity_task) if t}
         tasks.update(self._interaction_tasks)
         for task in tasks:
             task.cancel()
         await asyncio.gather(*tasks, return_exceptions=True)
         await renderer.close()
+
+    async def export_arknights_raw_rosters(self, owner_id: str, *, allow_empty: bool = False) -> dict:
+        """Public v1 raw roster API. No credentials or game-resource dependency."""
+        return await self.service.raw_operator_rosters(owner_id, allow_empty=allow_empty)
+
+    async def filter_skland_bound_owners(self, owner_ids: list[str]) -> list[str]:
+        """Public caller-scoped filter; return IDs only, never credential data."""
+        return await self.store.filter_bound_owners(owner_ids)
 
     async def export_arknights_operator_snapshot(self, owner_id: str) -> dict:
         """Export the default Arknights role as a credential-free snapshot."""
@@ -195,19 +209,24 @@ class SklandPlugin(Star):
         async for result in self._run(event, argv):
             yield result
 
-    @filter.command("森空岛登记")
-    async def shortcut_register(self, event: AstrMessageEvent, args: GreedyStr):
-        async for result in self._run(event, ["register", *shlex.split(str(args))]):
+    @filter.command("理智订阅")
+    async def shortcut_sanity_subscribe(self, event: AstrMessageEvent, args: GreedyStr):
+        async for result in self._run(event, ["sanity", "subscribe", *shlex.split(str(args))]):
             yield result
 
-    @filter.command("森空岛白名单")
-    async def shortcut_whitelist(self, event: AstrMessageEvent):
-        async for result in self._run(event, ["whitelist"]):
+    @filter.command("理智取消")
+    async def shortcut_sanity_unsubscribe(self, event: AstrMessageEvent, args: GreedyStr):
+        async for result in self._run(event, ["sanity", "unsubscribe", *shlex.split(str(args))]):
             yield result
 
-    @filter.command("森空岛撤销登记")
-    async def shortcut_unregister(self, event: AstrMessageEvent, args: GreedyStr):
-        async for result in self._run(event, ["unregister", *shlex.split(str(args))]):
+    @filter.command("理智订阅状态")
+    async def shortcut_sanity_status(self, event: AstrMessageEvent):
+        async for result in self._run(event, ["sanity", "status"]):
+            yield result
+
+    @filter.command("理智提醒测试")
+    async def shortcut_sanity_test(self, event: AstrMessageEvent):
+        async for result in self._run(event, ["sanity", "test"]):
             yield result
 
     # 中文快捷指令：绑定相关
@@ -414,6 +433,9 @@ class SklandPlugin(Star):
     async def _run(self, event: AstrMessageEvent, argv: list[str]) -> AsyncGenerator:
         owner_id = self._owner_id(event)
         try:
+            if not event.get_group_id():
+                async with self._sanity_monitor.owner_lock(owner_id):
+                    await self.store.remember_private_session(owner_id, str(event.unified_msg_origin))
             command = argv[0].lower() if argv else "card"
             role_index = None
             if command in {"card", "efcard", "rogue", "box", "gacha", "efgacha", "efwar", "import", "clue", "rginfo", "arksign", "efsign"}:
@@ -422,21 +444,23 @@ class SklandPlugin(Star):
             await react(event, "processing")
             if command in {"help", "帮助", "-h", "--help"}:
                 yield event.plain_result(HELP)
-            elif command in {"register", "whitelist", "unregister"}:
-                yield event.plain_result(await self._manage_credential_groups(event, command, argv[1:]))
+            elif command in {"version", "版本"}:
+                if len(argv) != 1:
+                    raise ValueError("用法：/sk version")
+                yield event.plain_result(self._deployment_info(event))
+            elif command == "sanity":
+                yield event.plain_result(await self._sanity_command(event, owner_id, argv[1:]))
             elif command in {"bind", "qrcode"}:
-                await self._require_credential_access(event)
                 if command == "bind" and len(argv) < 2:
                     raise ValueError("用法：森空岛绑定 <24位token|32位cred>")
                 async with self.service.bindings.exclusive(owner_id):
                     if command == "bind":
-                        saved = await self._confirm_binding(event, owner_id, argv[-1])
+                        saved = await self._bind_account(event, owner_id, argv[-1])
                     else:
                         saved = await self._qrcode_login(event, owner_id)
                 if saved:
                     await self._import_support_after_login(event, owner_id)
             elif command == "unbind":
-                await self._require_credential_access(event)
                 async with self.service.bindings.exclusive(owner_id):
                     await self._unbind_interaction(event, owner_id)
             elif command == "char":
@@ -671,16 +695,8 @@ class SklandPlugin(Star):
         yield event.plain_result("签到结果\n" + "\n".join(
             f"{char.nickname}（账号 {char.account_id} / {char.display_server}）：{text}" for char, text in results))
 
-    async def _confirm_binding(self, event, owner_id, secret):
+    async def _bind_account(self, event, owner_id, secret):
         prepared = await self.service.bindings.prepare(owner_id, secret)
-        rendered = await render_bound_roles_card(prepared.card)
-        result = await self._image_result(event, rendered, "binding")
-        choice = await wait_choice(event, ("确认", "取消"), MessageChain([*result.chain,
-            Plain("请在 60 秒内回复 确认 或 取消；确认后保存账号。")]), tasks=self._interaction_tasks)
-        if choice != "确认":
-            await event.send(MessageChain([Plain("已取消绑定，未保存账号。" if choice == "取消" else "确认超时或输入无效，未保存账号。")]))
-            return False
-        await self._require_credential_access(event)
         await self.service.bindings.commit(prepared)
         await ark_card_cache.invalidate_owner(owner_id)
         try:
@@ -708,6 +724,21 @@ class SklandPlugin(Star):
             logger.warning("登录成功后的助战导入失败，账号绑定已保留。")
             message = "登录已成功，助战自动导入失败，旧快照已保留。可在本群发送 /助战 森空岛导入 重试。"
         if message:
+            if isinstance(message, dict):
+                images = message["images"] if message["role_count"] > 3 else []
+                if images:
+                    try:
+                        components = []
+                        for content in images:
+                            result = await self._image_result(event, content, "support-import")
+                            components.extend(result.chain)
+                        await event.send(MessageChain(components))
+                        return
+                    except asyncio.CancelledError:
+                        raise
+                    except Exception:
+                        logger.warning("登录后的助战导入图片发送失败，回退短摘要。")
+                message = message["short_text"] if message["role_count"] > 3 else message["text"]
             try:
                 await event.send(MessageChain([Plain(message)]))
             except Exception:
@@ -733,7 +764,6 @@ class SklandPlugin(Star):
         if choice != "确认":
             await event.send(MessageChain([Plain("已取消解绑。")]))
             return
-        await self._require_credential_access(event)
         await self.service.unbind(owner_id, ids, expected_version=version)
         await event.send(MessageChain([Plain(f"已解绑 {len(ids)} 个账号。")]))
 
@@ -743,7 +773,6 @@ class SklandPlugin(Star):
         avatar = await fetch_user_avatar(getattr(author, "avatar", None))
         scan_id = await SklandLoginAPI.get_scan()
         qr_image = render_qrcode_card(f"hypergryph://scan_login?scanId={scan_id}", avatar)
-        sender_name = str(event.get_sender_name() or "").strip() or "用户"
         qr_receipt = None
         tasks = set()
         async def poll():
@@ -755,8 +784,9 @@ class SklandPlugin(Star):
                     await asyncio.sleep(2)
             return None
         try:
+            prefix = [At(qq=event.get_sender_id())] if event.get_group_id() else []
             qr_receipt = await send_with_receipt(event, MessageChain([
-                Plain(f"{sender_name} 请使用森空岛 App 扫码，二维码约 100 秒内有效；回复 取消 可中止。"), Image.fromBytes(qr_image)]))
+                *prefix, Plain(" 请使用森空岛 App 扫码，二维码约 100 秒内有效；回复 取消 可中止。"), Image.fromBytes(qr_image)]))
             scan = asyncio.create_task(poll())
             cancel = asyncio.create_task(wait_choice(event, ("取消",), timeout=100, tasks=self._interaction_tasks))
             tasks.update((scan, cancel))
@@ -772,7 +802,7 @@ class SklandPlugin(Star):
                 await event.send(event.plain_result("二维码已超时，请重新执行 扫码绑定"))
                 return False
             token = await SklandLoginAPI.get_token_by_scan_code(scan_code)
-            return await self._confirm_binding(event, owner_id, token)
+            return await self._bind_account(event, owner_id, token)
         finally:
             for task in tasks:
                 task.cancel()
@@ -991,47 +1021,124 @@ class SklandPlugin(Star):
             return f"{platform}:{args[0]}", args[1:]
         return cls._owner_id(event), args
 
-    async def _manage_credential_groups(self, event, command, args):
-        if command == "register":
-            group_id = str(event.get_group_id() or "").strip()
-            entry = str(event.unified_msg_origin)
-            policy = CredentialCommandAccessPolicy.from_values(
-                self.config.get("credential_registration_groups", [])
-            )
-            if not group_id or not policy.allows(group_id, entry):
-                raise ValueError("请在管理员配置的白名单登记入口群中发送 /森空岛登记 <目标群完整SID>。")
-            if len(args) != 1:
-                raise ValueError("用法：/森空岛登记 <目标群完整SID>；不会默认登记当前群。")
-            target = validate_group_sid(args[0])
-            added = await self.store.register_credential_group(
-                target, entry_umo=entry, registered_by=self._owner_id(event),
-            )
-            return f"目标群 {target} 已加入登录白名单。" if added else f"目标群 {target} 已在白名单中。"
-        self._require_admin(event)
-        if command == "whitelist":
-            if args:
-                raise ValueError("用法：/森空岛白名单")
-            rows = await self.store.list_credential_groups()
-            lines = ["森空岛登录白名单："]
-            for row in rows:
-                origin = "旧配置迁移" if row["legacy_match"] else f"登记入口：{row['entry_umo']}；登记人：{row['registered_by']}"
-                lines.append(f"- {row['target_sid']}（{origin}；{row['registered_at']}）")
-            return "\n".join(lines) if rows else "森空岛登录白名单为空。"
-        if len(args) != 1:
-            raise ValueError("用法：/森空岛撤销登记 <白名单列表中的SID或迁移群ID>")
-        removed = await self.store.revoke_credential_group(args[0])
-        return "已撤销该目标群的登录权限，账号与助战数据保留。" if removed else "白名单中没有该记录，请使用列表中的完整标识。"
+    def _deployment_info(self, event) -> str:
+        # Inspect the actual loaded functions, not metadata.yaml on disk: a
+        # partial manual copy can leave the API or service from an old release.
+        service_function = getattr(self.service._with_refresh, "__func__", self.service._with_refresh)
+        service_globals = getattr(service_function, "__globals__", {})
+        api = service_globals.get("SklandAPI")
+        api_method = getattr(api, "ark_card_raw", None)
+        api_function = getattr(api_method, "__func__", api_method)
+        api_code = getattr(api_function, "__code__", None)
+        service_code = getattr(service_function, "__code__", None)
+        api_loaded = api_code is not None and 401 in api_code.co_consts and "UnauthorizedException" in api_code.co_names
+        service_loaded = service_code is not None and "credentials_regenerated" in service_code.co_varnames
+        lines = [f"森空岛助手运行版本：{PLUGIN_VERSION}",
+                 f"角色接口 401 恢复：{'已加载' if api_loaded else '未加载或无法确认'}",
+                 f"凭证自动恢复链：{'已加载' if service_loaded else '未加载或无法确认'}"]
+        if not api_loaded or not service_loaded:
+            lines.append("请完整覆盖实际插件目录中的 skland 文件夹，再重启 AstrBot。")
+        if event.is_admin():
+            for label, function in (("角色接口文件", api_function), ("凭证服务文件", service_function)):
+                path = getattr(function, "__globals__", {}).get("__file__")
+                if path:
+                    lines.append(f"{label}：{Path(path).resolve()}")
+        return "\n".join(lines)
 
-    async def _require_credential_access(self, event: AstrMessageEvent) -> None:
-        group_id = str(event.get_group_id() or "").strip()
-        if not group_id:
-            return
-        unified_origin = str(getattr(event, "unified_msg_origin", "")).strip()
-        if not await self.store.credential_group_allowed(group_id, unified_origin):
-            raise ValueError(
-                "本群尚未加入森空岛登录白名单。请在登记入口群发送 "
-                f"/森空岛登记 {unified_origin}；登记入口由管理员在 credential_registration_groups 中配置。"
-            )
+    async def _send_private_reminder(self, private_umo: str, content: str) -> None:
+        await send_private_text(self.context, private_umo, content)
+
+    async def _private_target(self, event, owner_id: str) -> str:
+        remembered = await self.store.private_session(owner_id)
+        if remembered:
+            return remembered
+        source = getattr(getattr(event, "message_obj", None), "raw_message", None)
+        user_id = getattr(getattr(source, "author", None), "user_openid", None) or event.get_sender_id()
+        return f"{event.get_platform_id()}:FriendMessage:{user_id}"
+
+    async def _sanity_command(self, event, owner_id: str, argv: list[str]) -> str:
+        action, args = (argv[0].lower(), argv[1:]) if argv else ("status", [])
+        async with self._sanity_monitor.owner_lock(owner_id):
+            if action == "status":
+                if args:
+                    raise ValueError("用法：/理智订阅状态")
+                subscriptions = await self.store.list_sanity_subscriptions(owner_id)
+                if not subscriptions:
+                    return "尚无理智订阅。使用 /理智订阅 [方舟|终末地] [提前分钟] [-r 序号]。"
+                roles = {r.id: r for r in await self.store.get_characters(owner_id, include_unavailable=True)}
+                lines = ["理智订阅状态："]
+                for sub in subscriptions:
+                    role = roles.get(sub.character_id)
+                    if role is None:
+                        continue
+                    lines.append(f"{GAME_NAMES[role.app_code]} · {role.nickname}（{role.display_server}）")
+                    state, read_error = None, None
+                    if role.is_available:
+                        now = self._sanity_monitor.clock()
+                        version = await self.store.owner_version(owner_id)
+                        try:
+                            state = await asyncio.wait_for(self.service.sanity(role, now=now), timeout=30)
+                            recovery = recovered_data_error(sub)
+                            if await self.store.owner_version(owner_id) != version:
+                                state, read_error = None, "账号或角色已变化，请重新查询。"
+                            elif not await self.store.update_sanity_subscription(sub, current=state.current,
+                                    maximum=state.maximum, full_at=state.full_at, last_checked=now, **recovery):
+                                state, read_error = None, "订阅已变化，请重新查询。"
+                            else:
+                                for key, value in recovery.items():
+                                    setattr(sub, key, value)
+                        except Exception:
+                            state, read_error = None, "暂时无法获取当前理智，请稍后重试。"
+                    else:
+                        read_error = "角色暂不可用。"
+                    if state is not None:
+                        lines.extend(sanity_details(state))
+                    else:
+                        lines.append(f"当前理智：{read_error}")
+                        if sub.last_checked and sub.current is not None:
+                            checked = format_sanity_time(sub.last_checked)
+                            lines.append(f"上次记录理智：{sub.current}/{sub.maximum}（{checked}）")
+                            if sub.full_at is not None:
+                                lines.append(f"上次预计满值时间：{format_sanity_time(sub.full_at)}")
+                    status = ("角色暂不可用" if not role.is_available else "私信投递暂停，请执行 /理智提醒测试" if sub.blocked
+                              else "等待重试" if sub.retry_at > self._sanity_monitor.clock() else "本轮已提醒" if sub.notified else "等待接近满值")
+                    lines.append(f"提醒：提前 {sub.advance_minutes} 分钟，{status}")
+                    if sub.last_error:
+                        lines.append(f"  最近失败：{sub.last_error}")
+                return "\n".join(lines)
+            if action == "test":
+                if args:
+                    raise ValueError("用法：/理智提醒测试")
+                await self._sanity_monitor.test_private(owner_id, await self._private_target(event, owner_id))
+                return "测试私信已发送；暂停的订阅已恢复。"
+            if action not in {"subscribe", "unsubscribe"}:
+                raise ValueError("用法：/sk sanity subscribe|unsubscribe|status|test")
+            role_index, args = take_role(args)
+            game = ARKNIGHTS
+            if args and args[0].lower() in GAME_ALIASES:
+                game = GAME_ALIASES[args.pop(0).lower()]
+            if action == "unsubscribe" and args == ["--all"]:
+                if role_index is not None:
+                    raise ValueError("--all 不能与 -r 同时使用")
+                count = await self.store.unsubscribe_sanity(owner_id, game)
+                return f"已取消 {GAME_NAMES[game]} 的 {count} 项理智订阅。"
+            if action == "subscribe":
+                if len(args) > 1:
+                    raise ValueError("用法：/理智订阅 [方舟|终末地] [提前分钟] [-r 序号]")
+                try:
+                    minutes = int(args[0]) if args else 10
+                except ValueError:
+                    raise ValueError("提前分钟须为非负整数，游戏可填 方舟/终末地/ark/ef") from None
+                if minutes < 0:
+                    raise ValueError("提前分钟须为非负整数")
+                role = await self.service.require_character(owner_id, game, role_index)
+                await self.store.subscribe_sanity(owner_id, role.id, await self._private_target(event, owner_id), minutes)
+                return f"已订阅 {GAME_NAMES[game]} · {role.nickname}（{role.display_server}），提前 {minutes} 分钟私信提醒。\n{PRIVATE_HINT}"
+            if args:
+                raise ValueError("用法：/理智取消 [方舟|终末地] [-r 序号|--all]")
+            role = await self.service.require_character(owner_id, game, role_index)
+            count = await self.store.unsubscribe_sanity(owner_id, game, role.id)
+            return f"已取消 {role.nickname} 的理智订阅。" if count else "该角色尚未订阅。"
 
     @staticmethod
     def _require_admin(event: AstrMessageEvent) -> None:

@@ -13,7 +13,8 @@ from plugin_harness import At, Event, Image, MessageChain, Plain, Reply
 
 
 @pytest.mark.asyncio
-async def test_real_plugin_loads_and_initializes_without_arksupport(tmp_path):
+@pytest.mark.parametrize("startup_update", [False, True])
+async def test_real_plugin_loads_and_initializes_without_arksupport(tmp_path, startup_update):
     class Star:
         def __init__(self, context, config): self.context = context
 
@@ -54,16 +55,25 @@ async def test_real_plugin_loads_and_initializes_without_arksupport(tmp_path):
             sys.modules[spec.name] = entry
             spec.loader.exec_module(entry)
             context = SimpleNamespace(get_registered_star=Mock(return_value=None))
-            obj = entry.SklandPlugin(context, {"auto_update_resources": False})
+            config = {"auto_update_resources": False}
+            if startup_update:
+                config["startup_update_resources"] = True
+            obj = entry.SklandPlugin(context, config)
             obj._startup_resources = AsyncMock()
+            obj._sanity_monitor.check_once = AsyncMock()
             entry.game_data.load_cached = Mock()
             await obj.initialize()
             try:
                 await asyncio.sleep(0)
+                assert obj._startup_resources.await_count == int(startup_update)
+                entry.game_data.load_cached.assert_called_once()
+                obj._sanity_monitor.check_once.assert_awaited_once()
+                assert not obj._sanity_task.done()
                 assert await obj.store.list_accounts("bot:u") == []
                 await obj._import_support_after_login(Event(group="B"), "bot:u")
                 context.get_registered_star.assert_called_once_with("astrbot_plugin_arksupport")
             finally:
                 await obj.terminate()
+                assert obj._sanity_task.cancelled()
     finally:
         sys.meta_path.remove(blocker)

@@ -185,7 +185,12 @@ class SklandAPI:
     @classmethod
     async def ark_card(cls, cred: CRED, uid: str) -> ArkCard:
         """获取明日方舟角色信息"""
-        game_info_url = f"{base_url}/game/player/info?uid={uid}"
+        return ArkCard(**await cls.ark_card_raw(cred, uid))
+
+    @classmethod
+    async def ark_card_raw(cls, cred: CRED, uid: str) -> dict:
+        """Fetch JSON without resource, rendering, or display-model validation."""
+        game_info_url = f"{base_url}/game/player/info?{urlencode({'uid': uid})}"
         async with httpx.AsyncClient() as client:
             try:
                 response = await client.get(
@@ -194,22 +199,32 @@ class SklandAPI:
                         cred, game_info_url, method="get"
                     ),
                 )
-                if status := response.json().get("code"):
-                    if status == 10000:
-                        raise UnauthorizedException(
-                            f"获取账号 game_info 失败：{response.json().get('message')}"
-                        )
-                    elif status == 10002:
-                        raise LoginException(
-                            f"获取账号 game_info 失败：{response.json().get('message')}"
-                        )
-                    if status != 0:
-                        raise RequestException(
-                            f"获取账号 game_info 失败：{response.json().get('message')}"
-                        )
-                return ArkCard(**response.json()["data"])
+                # Preserve authentication errors before raise_for_status turns
+                # HTTP 401 into a generic request failure that cannot refresh.
+                try:
+                    payload = response.json()
+                except ValueError:
+                    payload = None
+                status = payload.get("code") if isinstance(payload, dict) else None
+                if status == 10002:
+                    raise LoginException("森空岛登录凭证已失效，需要重新获取认证。")
+                if response.status_code == 401 or status == 10000:
+                    raise UnauthorizedException("森空岛认证已失效，需要刷新签名 token。")
+                response.raise_for_status()
+                if not isinstance(payload, dict):
+                    raise RequestException("森空岛返回的角色数据格式无效")
+                if status:
+                    if not isinstance(status, int):
+                        raise RequestException("森空岛返回的角色错误码格式无效")
+                    raise RequestException(f"获取角色数据失败（森空岛错误码 {status}）")
+                data = payload.get("data")
+                if not isinstance(data, dict):
+                    raise RequestException("角色数据格式无效")
+                return data
+            except httpx.HTTPStatusError as e:
+                raise RequestException(f"获取角色数据失败（HTTP {e.response.status_code}），请稍后重试。") from e
             except httpx.HTTPError as e:
-                raise RequestException(f"获取账号 userId 失败: {e}")
+                raise RequestException(f"获取角色数据失败：网络连接异常（{type(e).__name__}），请稍后重试。") from e
 
     @classmethod
     async def get_rogue(cls, cred: CRED, uid: str, topic_id: str) -> RogueData:

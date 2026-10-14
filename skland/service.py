@@ -1,7 +1,9 @@
 import asyncio
 import logging
+import json
 from collections.abc import Awaitable, Callable
-from datetime import datetime
+from dataclasses import replace
+from datetime import datetime, timezone
 from typing import Any, TypeVar
 
 import httpx
@@ -9,7 +11,7 @@ from pydantic import TypeAdapter
 
 from .api import SklandAPI, SklandLoginAPI
 from .card_cache import ark_card_cache
-from .exception import LoginException, RequestException, UnauthorizedException
+from .exception import LoginException, RequestException, UnauthorizedException, RosterExportError
 from .models import Account, Character, GachaRecord
 from .resourcesync import game_data
 from .schemas import (
@@ -25,6 +27,9 @@ from .store import SklandStore
 from .binding import AccountBindings, roles_from_apps
 from .schemas import WarEchoesView, EfGachaView
 from .gacha import group_endfield_records
+from .raw_roster import project_card
+from .sanity import sanity_state
+from .sanity import sanity_state
 
 T = TypeVar("T")
 ARKNIGHTS = "arknights"
@@ -82,7 +87,7 @@ class SklandService:
             )
 
     async def bind(self, owner_id: str, secret: str) -> list[Character]:
-        """Programmatic binding. Interactive commands use prepare/confirm/commit."""
+        """Programmatic binding, using the same prepare/commit flow as commands."""
         async with self.bindings.exclusive(owner_id):
             prepared = await self.bindings.prepare(owner_id, secret)
             await self.bindings.commit(prepared)
@@ -169,6 +174,28 @@ class SklandService:
             )
         return card
 
+    async def sanity(self, character: Character, *, now: float):
+        """Fetch a fresh snapshot without the card display cache or rendering."""
+        account = await self.require_account(character.owner_id, character.account_id)
+        if character.app_code == ARKNIGHTS:
+            card = await self._with_refresh(account, lambda cred: SklandAPI.ark_card(cred, character.uid))
+        elif character.app_code == ENDFIELD:
+            card = await self._with_refresh(account, lambda cred: SklandAPI.endfield_card(cred, account.user_id or "", character))
+        else:
+            raise ValueError("不支持的游戏")
+        return sanity_state(character.app_code, card, now=now)
+
+    async def sanity(self, character: Character, *, now: float):
+        """Fetch a fresh snapshot without the card display cache or rendering."""
+        account = await self.require_account(character.owner_id, character.account_id)
+        if character.app_code == ARKNIGHTS:
+            card = await self._with_refresh(account, lambda cred: SklandAPI.ark_card(cred, character.uid))
+        elif character.app_code == ENDFIELD:
+            card = await self._with_refresh(account, lambda cred: SklandAPI.endfield_card(cred, account.user_id or "", character))
+        else:
+            raise ValueError("不支持的游戏")
+        return sanity_state(character.app_code, card, now=now)
+
     async def operator_roster(
         self,
         owner_id: str,
@@ -241,6 +268,48 @@ class SklandService:
             )
             for role, card in role_cards
         ]
+
+    async def raw_operator_rosters(self, owner_id: str, *, allow_empty: bool = False) -> dict:
+        """An atomic projection of committed roles, independent of game resources."""
+        try:
+            version = await self.store.owner_version(owner_id)
+            roles = await self.store.get_characters(owner_id, ARKNIGHTS)
+            if not roles and not allow_empty:
+                raise RosterExportError("not_bound", "当前没有可用的明日方舟角色。")
+            unique = {}
+            for role in sorted(roles, key=lambda r: (not r.isdefault, r.account_id or 0)):
+                unique.setdefault((role.channel_master_id, role.uid), role)
+            rows = []
+            for role in unique.values():
+                account = await self.require_account(owner_id, role.account_id)
+                data = await self._with_refresh(account, lambda cred, r=role: SklandAPI.ark_card_raw(cred, r.uid))
+                # Explicit projection excludes credentials and unrelated account data.
+                rows.append({
+                    "role": {"uid": role.uid, "nickname": role.nickname,
+                             "server_id": role.channel_master_id, "server_name": role.display_server},
+                    **project_card(data),
+                })
+            if await self.store.owner_version(owner_id) != version:
+                raise RosterExportError("binding_changed", "账号或角色在取数期间发生变化，请重试。")
+            return json.loads(json.dumps({
+                "schema_version": 1, "fetched_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+                "binding_revision": version, "complete_role_set": True, "roles": rows,
+            }))
+        except RosterExportError:
+            raise
+        except (UnauthorizedException, LoginException) as exc:
+            raise RosterExportError("auth_failed", "森空岛认证失效，请重新绑定。") from exc
+        except RequestException as exc:
+            code = "auth_failed" if "cred 已失效" in str(exc) or "刷新后的账号身份" in str(exc) else "network_failed"
+            raise RosterExportError(code, "森空岛认证失效，请重新绑定。" if code == "auth_failed" else "森空岛请求失败，请稍后重试。") from exc
+        except ValueError as exc:
+            if "尚未绑定" in str(exc):
+                raise RosterExportError("not_bound", "森空岛账号不可用，请检查绑定。") from exc
+            logger.error("Raw roster validation failed: %s", type(exc).__name__)
+            raise RosterExportError("invalid_response", "森空岛返回的干员数据格式无效。") from exc
+        except Exception as exc:
+            logger.error("Raw roster export failed: %s", type(exc).__name__)
+            raise RosterExportError("invalid_response", "森空岛原始干员数据获取异常，请检查日志。") from exc
 
     async def sign(
         self,
@@ -599,21 +668,42 @@ class SklandService:
         def cred() -> CRED:
             return CRED(account.cred, account.cred_token, account.user_id)
 
-        original = (account.cred, account.cred_token)
-        try:
-            return await request(cred())
-        except UnauthorizedException:
-            account.cred_token = await SklandLoginAPI.refresh_token(account.cred)
-            await self.store.save_refreshed_credentials(account, original)
-            return await request(cred())
-        except LoginException:
+        token_refreshed = credentials_regenerated = False
+        while True:
+            try:
+                return await request(cred())
+            except UnauthorizedException:
+                if credentials_regenerated:
+                    raise UnauthorizedException("更新认证后仍未通过验证，请重新扫码绑定。") from None
+                if not token_refreshed:
+                    token_refreshed = True
+                    try:
+                        token = await SklandLoginAPI.refresh_token(account.cred)
+                    except (LoginException, UnauthorizedException):
+                        # The cred itself expired; fall through to the saved
+                        # login token instead of repeatedly refreshing it.
+                        pass
+                    else:
+                        candidate = replace(account, cred_token=token)
+                        await self.store.save_refreshed_credentials(candidate, (account.cred, account.cred_token))
+                        account.cred_token = token
+                        continue
+            except LoginException:
+                if credentials_regenerated:
+                    raise LoginException("更新登录后仍未通过验证，请重新扫码绑定。") from None
             if not account.access_token:
-                raise RequestException("cred 已失效且未保存 token，无法自动刷新")
+                raise RequestException("cred 已失效且未保存 token，无法自动刷新；请重新扫码绑定。")
             grant = await SklandLoginAPI.get_grant_code(account.access_token, 0)
             new_cred = await SklandLoginAPI.get_cred(grant)
+            if not new_cred.userId:
+                new_cred.userId = await SklandAPI.get_user_ID(new_cred)
+            if not new_cred.userId:
+                raise RequestException("无法确认刷新后的账号身份，请重新扫码绑定。")
+            new_cred.userId = str(new_cred.userId)
             if account.user_id and new_cred.userId and account.user_id != new_cred.userId:
                 raise RequestException("刷新后的账号身份不一致，请重新绑定")
-            account.cred, account.cred_token = new_cred.cred, new_cred.token
-            account.user_id = new_cred.userId or account.user_id
-            await self.store.save_refreshed_credentials(account, original)
-            return await request(cred())
+            candidate = replace(account, cred=new_cred.cred, cred_token=new_cred.token,
+                                user_id=new_cred.userId or account.user_id)
+            await self.store.save_refreshed_credentials(candidate, (account.cred, account.cred_token))
+            account.cred, account.cred_token, account.user_id = candidate.cred, candidate.cred_token, candidate.user_id
+            credentials_regenerated = True

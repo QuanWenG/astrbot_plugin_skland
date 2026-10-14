@@ -1,6 +1,6 @@
 import httpx
 
-from ..exception import RequestException
+from ..exception import LoginException, RequestException
 from ..schemas import CRED
 
 skland_app_code = "4ca99fa6b56cc2ba"
@@ -15,6 +15,28 @@ class SklandLoginAPI:
         "Accept-Encoding": "gzip",
         "Connection": "close",
     }
+
+    @staticmethod
+    def _auth_response(response: httpx.Response, operation: str) -> dict:
+        try:
+            payload = response.json()
+        except ValueError:
+            payload = None
+        codes = [payload.get(key) for key in ("code", "status")] if isinstance(payload, dict) else []
+        if response.status_code == 401 or any(code in (10000, 10002) for code in codes):
+            raise LoginException(f"{operation}：登录凭证已失效，请重新扫码绑定。")
+        try:
+            response.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            raise RequestException(f"{operation}失败（HTTP {response.status_code}），请稍后重试。") from exc
+        if not isinstance(payload, dict):
+            raise RequestException(f"{operation}失败：森空岛返回了无效数据。")
+        if any(code not in (None, 0) for code in codes):
+            raise RequestException(f"{operation}失败：森空岛认证接口拒绝了请求。")
+        data = payload.get("data")
+        if not isinstance(data, dict):
+            raise RequestException(f"{operation}失败：森空岛返回的认证数据不完整。")
+        return data
 
     @classmethod
     async def get_grant_code(cls, token: str, grant_type: int) -> str:
@@ -35,16 +57,11 @@ class SklandLoginAPI:
                 json={"appCode": code, "token": token, "type": grant_type},
                 headers={**cls._headers},
             )
-            if status := response.json().get("status"):
-                if status != 0:
-                    raise RequestException(
-                        f"使用token获得认证代码失败：{response.json().get('msg')}"
-                    )
-            return (
-                response.json()["data"]["code"]
-                if grant_type == 0
-                else response.json()["data"]["token"]
-            )
+            data = cls._auth_response(response, "获取登录授权")
+            value = data.get("code" if grant_type == 0 else "token")
+            if not isinstance(value, str) or not value.strip():
+                raise RequestException("获取登录授权失败：返回的授权数据无效。")
+            return value
 
     @classmethod
     async def get_cred(cls, grant_code: str) -> CRED:
@@ -54,12 +71,11 @@ class SklandLoginAPI:
                 json={"code": grant_code, "kind": 1},
                 headers={**cls._headers},
             )
-            if status := response.json().get("status"):
-                if status != 0:
-                    raise RequestException(
-                        f"获得cred失败：{response.json().get('messgae')}"
-                    )
-            return CRED(**response.json().get("data"))
+            data = cls._auth_response(response, "获取森空岛认证")
+            if any(not isinstance(data.get(key), str) or not data[key].strip() for key in ("cred", "token")):
+                raise RequestException("获取森空岛认证失败：返回的凭证数据无效。")
+            user_id = data.get("userId")
+            return CRED(data["cred"], data["token"], str(user_id) if user_id is not None else None)
 
     @classmethod
     async def refresh_token(cls, cred: str) -> str:
@@ -70,16 +86,13 @@ class SklandLoginAPI:
                     refresh_url,
                     headers={**cls._headers, "cred": cred},
                 )
-                response.raise_for_status()
-                if status := response.json().get("status"):
-                    if status != 0:
-                        raise RequestException(
-                            f"刷新token失败：{response.json().get('message')}"
-                        )
-                token = response.json().get("data").get("token")
+                data = cls._auth_response(response, "刷新签名 token")
+                token = data.get("token")
+                if not isinstance(token, str) or not token.strip():
+                    raise RequestException("刷新签名 token 失败：森空岛未返回有效 token。")
                 return token
             except httpx.HTTPError as e:
-                raise RequestException(f"刷新token失败：{str(e)}")
+                raise RequestException("刷新签名 token 失败：网络连接异常，请稍后重试。") from e
 
     @classmethod
     async def get_scan(cls) -> str:

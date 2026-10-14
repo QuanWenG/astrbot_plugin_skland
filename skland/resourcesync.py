@@ -4,6 +4,7 @@ import asyncio
 import json
 import logging
 import os
+import shutil
 import tempfile
 from pathlib import Path
 from typing import Any
@@ -14,6 +15,7 @@ import httpx
 from . import config as paths
 from .exception import RequestException
 from .download import GitHubDataClient
+from .game_tables import compact_game_table
 from .schemas.endfield.gacha.base import EfGachaContentPool
 from .schemas import (
     CharTable,
@@ -79,7 +81,7 @@ class GameDataRepository:
                 changed = force or local != remote or not self._has_valid_core_cache(root)
                 batch = {}
                 if changed:
-                    tables = {route: await client.get_json(base + route) for route in self.FILES}
+                    tables = {route: compact_game_table(route, await client.get_json(base + route)) for route in self.FILES}
                     # Validate the complete staged generation before replacing any current file.
                     self._validate_core(tables)
                     batch = {root / route: json.dumps(value, ensure_ascii=False).encode() for route, value in tables.items()}
@@ -98,6 +100,9 @@ class GameDataRepository:
                     downloaded += sum(path != version_file for path in batch)
                 local = remote
                 messages.append("明日方舟数据资源更新成功" if batch else "明日方舟数据资源已是最新")
+                if changed:
+                    tables.clear()
+                batch.clear()
             except (RequestException, ValueError, KeyError, TypeError, OSError) as exc:
                 failed += 1
                 messages.append(f"明日方舟更新失败，保留原缓存：{exc}")
@@ -141,7 +146,7 @@ class GameDataRepository:
                 failed += 1
                 messages.append(f"干员筛选元数据更新失败，保留官方数据：{exc}")
                 logger.warning("干员筛选元数据更新失败，保留官方数据：%s", exc)
-        self._parse(metadata)
+        await asyncio.to_thread(self._parse, metadata)
         self.variant_groups_checked = self.variant_groups_loaded
         return local, downloaded, failed
 
@@ -166,7 +171,7 @@ class GameDataRepository:
     @classmethod
     def _has_valid_core_cache(cls, root):
         try:
-            cls._validate_core({route: json.loads((root / route).read_text("utf-8")) for route in cls.FILES})
+            cls._validate_core(cls._read_core_tables(root))
             return True
         except (OSError, ValueError, KeyError, TypeError):
             return False
@@ -201,11 +206,16 @@ class GameDataRepository:
         )
 
     @classmethod
+    def _read_core_tables(cls, root: Any) -> dict[str, Any]:
+        tables = {}
+        for route in cls.FILES:
+            with (root / route).open(encoding="utf-8") as stream:
+                tables[route] = compact_game_table(route, json.load(stream))
+        return tables
+
+    @classmethod
     def _load_tables(cls, root: Any) -> dict[str, Any]:
-        tables = {
-            route.rsplit("/", 1)[-1]: json.loads((root / route).read_text("utf-8"))
-            for route in cls.FILES
-        }
+        tables = {route.rsplit("/", 1)[-1]: value for route, value in cls._read_core_tables(root).items()}
         optional = root / cls.CHAR_META_FILE
         if optional.exists():
             try:
@@ -222,23 +232,24 @@ class GameDataRepository:
             root = paths.DATA_DIR
             tables = self._load_tables(root)
             chars = tables["character_table.json"]
-            self.character_table = []
+            character_table = []
             for char_id, value in chars.items():
                 char = CharTable(**value)
                 char.char_id = char_id
-                self.character_table.append(char)
+                character_table.append(char)
             pools = tables["gacha_table.json"]
-            self.gacha_table = [
+            gacha_table = [
                 GachaTable(**item) for item in pools.get("gachaPoolClient", [])
             ]
             detail_file = root / "gacha_details.json"
+            gacha_details = self.gacha_details
             if detail_file.exists():
                 data = json.loads(detail_file.read_text("utf-8"))
-                self.gacha_details = [
+                gacha_details = [
                     GachaDetails(**item) for item in data.get("gachaPoolClient", [])
                 ]
             self._load_ef_cache()
-            self.operator_catalog = OperatorCatalog.from_game_tables(
+            operator_catalog = OperatorCatalog.from_game_tables(
                 chars,
                 tables["char_patch_table.json"],
                 tables["uniequip_table.json"],
@@ -247,9 +258,14 @@ class GameDataRepository:
                 metadata,
                 tables.get("char_meta_table.json"),
             )
-            self.variant_groups_loaded = bool(self.operator_catalog.entries) and all(
-                entry.variant_group_id for entry in self.operator_catalog.entries
+            variant_groups_loaded = bool(operator_catalog.entries) and all(
+                entry.variant_group_id for entry in operator_catalog.entries
             )
+            self.character_table = character_table
+            self.gacha_table = gacha_table
+            self.gacha_details = gacha_details
+            self.operator_catalog = operator_catalog
+            self.variant_groups_loaded = variant_groups_loaded
         except (OSError, ValueError, KeyError) as exc:
             raise RequestException(f"游戏数据解析失败：{exc}") from exc
 
@@ -272,7 +288,8 @@ class GameDataRepository:
                 timeout=30,
                 headers={"User-Agent": "astrbot-plugin-skland operator metadata updater"},
             ) as client:
-                while True:
+                seen_ids = set()
+                for offset in range(0, 10000, 500):
                     response = await client.get(
                         self.PRTS_API,
                         params={
@@ -291,10 +308,15 @@ class GameDataRepository:
                     )
                     response.raise_for_status()
                     page = response.json().get("cargoquery") or []
+                    page_ids = {str(row.get("title", row).get("char_id") or "").strip() for row in page}
+                    if page and (not page_ids - seen_ids or "" in page_ids):
+                        raise RequestException("PRTS 分页未返回新的有效干员，已停止更新并保留缓存")
+                    seen_ids.update(page_ids)
                     rows.extend(page)
                     if len(page) < 500:
                         break
-                    offset += 500
+                else:
+                    raise RequestException("PRTS 分页超出数量限制，已停止更新并保留缓存")
         except (httpx.HTTPError, ValueError, TypeError) as exc:
             raise RequestException(f"获取 PRTS 干员筛选元数据失败：{exc}") from exc
         if not rows:
@@ -421,12 +443,19 @@ def _validate_image_payload(payload):
 
 def replace_batch(batch: dict[Path, bytes]) -> None:
     """Rollback on replacement failure; not a crash-atomic multi-file transaction."""
-    originals = {path: path.read_bytes() if path.exists() else None for path in batch}
+    originals = {}
     staged = {}
     replaced = []
     try:
         for path, payload in batch.items():
             path.parent.mkdir(parents=True, exist_ok=True)
+            if path.exists():
+                fd, name = tempfile.mkstemp(dir=path.parent, suffix=".backup")
+                os.close(fd)
+                originals[path] = Path(name)
+                shutil.copyfile(path, originals[path])
+            else:
+                originals[path] = None
             fd, name = tempfile.mkstemp(dir=path.parent, suffix=".stage")
             with os.fdopen(fd, "wb") as stream:
                 stream.write(payload)
@@ -436,15 +465,18 @@ def replace_batch(batch: dict[Path, bytes]) -> None:
             replaced.append(path)
     except BaseException:
         for path in reversed(replaced):
-            payload = originals[path]
-            if payload is None:
+            backup = originals[path]
+            if backup is None:
                 path.unlink(missing_ok=True)
             else:
-                path.write_bytes(payload)
+                os.replace(backup, path)
         raise
     finally:
         for temporary in staged.values():
             temporary.unlink(missing_ok=True)
+        for backup in originals.values():
+            if backup is not None:
+                backup.unlink(missing_ok=True)
 
 
 game_data = GameDataRepository()

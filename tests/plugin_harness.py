@@ -14,7 +14,7 @@ import pydantic
 from skland import cards
 from skland import config as paths
 from skland import service
-from skland.access import CredentialCommandAccessPolicy, validate_group_sid
+from skland.sanity import SanityMonitor, GAME_NAMES, GAME_ALIASES, PRIVATE_HINT, sanity_details, format_sanity_time, recovered_data_error
 from skland.support_integration import import_support_after_login
 from skland.commands import take_role, take_option, validate_shortcut
 from skland.exception import SklandError
@@ -24,7 +24,7 @@ from skland.models import Character
 from skland.operator_snapshot import build_operator_snapshot
 from skland.background import resolve_background, background_bytes
 from skland.box_pagination import parse_box_page_arguments
-from skland.qq_message import send_with_receipt
+from skland.qq_message import send_with_receipt, send_private_text
 from skland.interactions import wait_choice, react, send_images
 from skland.qrcode_card import fetch_user_avatar, render_qrcode_card
 from skland.schemas import Clue, RogueData
@@ -88,7 +88,7 @@ def make_plugin(store):
     source = ast.parse((Path(__file__).parents[1] / "main.py").read_text("utf-8"))
     selected = []
     for node in source.body:
-        if isinstance(node, ast.Assign) and any(isinstance(t, ast.Name) and t.id in {"HELP", "BUILTIN_COMMANDS"} for t in node.targets):
+        if isinstance(node, ast.Assign) and any(isinstance(t, ast.Name) and t.id in {"HELP", "BUILTIN_COMMANDS", "PLUGIN_VERSION"} for t in node.targets):
             selected.append(node)
         elif isinstance(node, ast.ClassDef) and node.name == "SklandPlugin":
             node.decorator_list = []
@@ -106,6 +106,7 @@ def make_plugin(store):
     plugin.store, plugin.service = store, service.SklandService(store)
     plugin.config, plugin._shortcuts, plugin._interaction_tasks = {}, {}, set()
     plugin.context = SimpleNamespace(get_registered_star=lambda name: None)
+    plugin._sanity_monitor = SanityMonitor(store, plugin.service, plugin._send_private_reminder)
     return plugin, ns
 
 

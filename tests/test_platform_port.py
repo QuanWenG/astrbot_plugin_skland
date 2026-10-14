@@ -76,7 +76,7 @@ async def test_confirmation_waits_for_same_user_session_and_cleans_up(astrbot_bo
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("mode", ["cancel", "timeout", "success", "render-failure"])
+@pytest.mark.parametrize("mode", ["cancel", "timeout", "success", "binding-failure"])
 async def test_qrcode_recall_on_every_exit(tmp_path, monkeypatch, mode):
     store = SklandStore(tmp_path / "db")
     await store.initialize()
@@ -95,17 +95,42 @@ async def test_qrcode_recall_on_every_exit(tmp_path, monkeypatch, mode):
         monkeypatch.setattr(ns["SklandLoginAPI"], "get_scan_status", AsyncMock(return_value="code"))
         async def pending(*args, **kwargs): await asyncio.Future()
         ns["wait_choice"] = pending
-    obj._confirm_binding = AsyncMock(side_effect=ValueError("render failed") if mode == "render-failure" else None)
+    obj._bind_account = AsyncMock(side_effect=ValueError("binding failed") if mode == "binding-failure" else None)
     await run(obj, Event(), ["qrcode"])
     receipt.recall.assert_awaited_once()
     assert not obj._interaction_tasks
     assert await store.list_accounts("bot:u") == []
-    if mode in {"success", "render-failure"}:
-        obj._confirm_binding.assert_awaited_once()
+    if mode in {"success", "binding-failure"}:
+        obj._bind_account.assert_awaited_once()
     else:
-        obj._confirm_binding.assert_not_awaited()
+        obj._bind_account.assert_not_awaited()
     sent = ns["send_with_receipt"].await_args.args[1]
     assert sent.chain[1].data == b"raw-png"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("group", ["g", ""])
+async def test_qrcode_prompt_mentions_only_in_groups(tmp_path, group):
+    from plugin_harness import At
+    store = SklandStore(tmp_path / "db")
+    await store.initialize()
+    obj, ns = make_plugin(store)
+    ns["fetch_user_avatar"] = AsyncMock(return_value=None)
+    ns["render_qrcode_card"] = lambda *args: b"qr-png"
+    ns["SklandLoginAPI"] = SimpleNamespace(get_scan=AsyncMock(return_value="scan"),
+        get_scan_status=AsyncMock(return_value=None))
+    ns["send_with_receipt"] = AsyncMock(return_value=None)
+    async def pending(*args, **kwargs):
+        await asyncio.Future()
+    ns["wait_choice"] = pending
+    event = Event(owner="requester", group=group)
+    await obj._qrcode_login(event, "bot:requester")
+    message = ns["send_with_receipt"].await_args.args[1]
+    ats = [item for item in message.chain if isinstance(item, At)]
+    assert [item.qq for item in ats] == (["requester"] if group else [])
+    assert message.chain[-1].data == b"qr-png"
+    assert "森空岛 App" in "".join(item.text for item in message.chain if isinstance(item, Plain))
+    assert not obj._interaction_tasks
 
 
 @pytest.mark.asyncio

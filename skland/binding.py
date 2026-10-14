@@ -1,4 +1,4 @@
-"""Detached account previews; commands commit only the confirmed projection."""
+"""Detached account preparation with identity validation and versioned commits."""
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, replace
 
