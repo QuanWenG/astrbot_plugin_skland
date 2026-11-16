@@ -1,0 +1,162 @@
+{
+  "source": "https://zonai.skland.com/api/v1/game/garrison/guide/resource?seasonId=act3autochess",
+  "seasonId": "act3autochess",
+  "bonds": [
+    {
+      "bondId": "yanShip",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/bond_icon/yanShip.png",
+      "name": "炎",
+      "activeCount": 3
+    },
+    {
+      "bondId": "sargonShip",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/bond_icon/sargonShip.png",
+      "name": "萨尔贡",
+      "activeCount": 3
+    },
+    {
+      "bondId": "victoriaShip",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/bond_icon/victoriaShip.png",
+      "name": "维多利亚",
+      "activeCount": 3
+    },
+    {
+      "bondId": "kjeragShip",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/bond_icon/kjeragShip.png",
+      "name": "谢拉格",
+      "activeCount": 3
+    },
+    {
+      "bondId": "egirShip",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/bond_icon/egirShip.png",
+      "name": "阿戈尔",
+      "activeCount": 3
+    },
+    {
+      "bondId": "siracusaShip",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/bond_icon/siracusaShip.png",
+      "name": "叙拉古",
+      "activeCount": 3
+    },
+    {
+      "bondId": "kazimierzShip",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/bond_icon/kazimierzShip.png",
+      "name": "卡西米尔",
+      "activeCount": 3
+    },
+    {
+      "bondId": "ursusShip",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/bond_icon/ursusShip.png",
+      "name": "乌萨斯",
+      "activeCount": 3
+    },
+    {
+      "bondId": "iberiaShip",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/bond_icon/iberiaShip.png",
+      "name": "伊比利亚",
+      "activeCount": 3
+    },
+    {
+      "bondId": "lethaniaShip",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/bond_icon/lethaniaShip.png",
+      "name": "莱塔尼亚",
+      "activeCount": 3
+    },
+    {
+      "bondId": "preciShip",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/bond_icon/preciShip.png",
+      "name": "精准",
+      "activeCount": 2
+    },
+    {
+      "bondId": "swiftShip",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/bond_icon/swiftShip.png",
+      "name": "迅捷",
+      "activeCount": 2
+    },
+    {
+      "bondId": "skillfulShip",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/bond_icon/skillfulShip.png",
+      "name": "灵巧",
+      "activeCount": 2
+    },
+    {
+      "bondId": "steadShip",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/bond_icon/steadShip.png",
+      "name": "坚守",
+      "activeCount": 2
+    },
+    {
+      "bondId": "deputShip",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/bond_icon/deputShip.png",
+      "name": "助力",
+      "activeCount": 2
+    },
+    {
+      "bondId": "visiShip",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/bond_icon/visiShip.png",
+      "name": "远见",
+      "activeCount": 2
+    },
+    {
+      "bondId": "miraShip",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/bond_icon/miraShip.png",
+      "name": "奇迹",
+      "activeCount": 2
+    },
+    {
+      "bondId": "investShip",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/bond_icon/investShip.png",
+      "name": "投资人",
+      "activeCount": 3
+    },
+    {
+      "bondId": "raidShip",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/bond_icon/raidShip.png",
+      "name": "突袭",
+      "activeCount": 2
+    },
+    {
+      "bondId": "indomShip",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/bond_icon/indomShip.png",
+      "name": "不屈",
+      "activeCount": 2
+    },
+    {
+      "bondId": "maniShip",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/bond_icon/maniShip.png",
+      "name": "调和",
+      "activeCount": 1
+    },
+    {
+      "bondId": "emptyShip",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/bond_icon/emptyShip.png",
+      "name": "协防干员",
+      "activeCount": 2
+    },
+    {
+      "bondId": "soloShip",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/bond_icon/soloShip.png",
+      "name": "独行",
+      "activeCount": 1
+    },
+    {
+      "bondId": "suntShip",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/bond_icon/suntShip.png",
+      "name": "绝技",
+      "activeCount": 2
+    },
+    {
+      "bondId": "docShip",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/bond_icon/docShip.png",
+      "name": "聚合",
+      "activeCount": 2
+    },
+    {
+      "bondId": "arcaneShip",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/bond_icon/arcaneShip.png",
+      "name": "奥术",
+      "activeCount": 2
+    }
+  ]
+}

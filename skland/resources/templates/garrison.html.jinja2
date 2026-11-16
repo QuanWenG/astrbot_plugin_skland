@@ -1,0 +1,327 @@
+<!doctype html>
+{% set page_background = 'page_background' | garrison_decoration %}
+{% set page_texture = 'page_texture' | garrison_decoration %}
+{% set card_background = 'card_background' | garrison_decoration %}
+{% set season_logo = 'season_logo' | garrison_decoration %}
+{% set header_decoration = 'header_decoration' | garrison_decoration %}
+{% macro bond_emblem(bond_id) %}
+  {% set bond_name = bond_resources.get(bond_id, {}).get('name', bond_id) %}
+  {% set bond_segments = bond_resources.get(bond_id, {}).get('activeCount', 1) %}
+  {% set bond_icon = bond_id | garrison_bond_icon %}
+  <div class="bond-emblem">
+    <svg class="bond-ring" viewBox="0 0 49 49" data-segments="{{ bond_segments }}" aria-hidden="true">
+      <circle cx="24.5" cy="24.5" r="19.25" fill="none" stroke="currentColor" stroke-width="2" pathLength="100"{% if bond_segments > 1 %} stroke-dasharray="{{ 100 / bond_segments - 2.5 }} 2.5" stroke-dashoffset="-1.25" transform="rotate(-90 24.5 24.5)"{% endif %}/>
+    </svg>
+    {% if bond_icon %}<img class="bond-icon" src="{{ bond_icon }}" alt="{{ bond_name }}" onerror="this.style.display='none';this.nextElementSibling.hidden=false">{% endif %}
+    <span class="bond-missing"{% if bond_icon %} hidden{% endif %}>{{ bond_name }}</span>
+  </div>
+{% endmacro %}
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width={{ image_width }}, initial-scale=1">
+  <title>卫戍协议战绩</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; width: {{ image_width }}px; }
+    body { color: #d8e0dd; font-family: "Microsoft YaHei", "Noto Sans CJK SC", sans-serif; background: #101c1d; }
+    .canvas { width: {{ image_width }}px; min-height: 220px; padding: 28px 32px 24px;
+      background-color: #101c1d;
+      background-image: linear-gradient(180deg, #06121115, #06121145 520px, #06121165),
+        {% if page_background %}url('{{ page_background }}'){% else %}none{% endif %},
+        {% if page_texture %}url('{{ page_texture }}'){% else %}none{% endif %};
+      background-position: center, center top, left top;
+      background-size: 100% 100%, 100% auto, 800px 800px;
+      background-repeat: no-repeat, no-repeat, repeat; }
+    .page-heading { display: flex; align-items: center; justify-content: space-between; gap: 32px;
+      position: relative; isolation: isolate; height: 112px; margin-bottom: 24px;
+      padding-left: 18px; border-left: 4px solid #b8b385; }
+    .page-heading::after { content: ""; position: absolute; z-index: -1; right: 170px; top: -12px;
+      width: 540px; height: 136px; pointer-events: none; opacity: .14; mix-blend-mode: screen;
+      background: {% if header_decoration %}url('{{ header_decoration }}'){% else %}none{% endif %} center 52% / 540px auto no-repeat;
+      mask-image: linear-gradient(90deg, transparent, #000 45%, transparent); }
+    .page-heading h1 { display: flex; align-items: center; margin: 0; color: #e2efea;
+      font-size: 36px; line-height: 64px; letter-spacing: 2px; }
+    .page-heading .title-text { margin-left: 0; color: #e2efea; font-size: 36px; letter-spacing: 2px; }
+    .season-logo { display: block; max-width: 360px; height: 64px; object-fit: contain; object-position: left center; }
+    .player { min-width: 0; }
+    .nickname { overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+      max-width: 1500px; color: #91b5ab; font-size: 18px; line-height: 26px; }
+    .overview { display: grid; grid-template-columns: 500px repeat(2, minmax(0, 1fr));
+      gap: 20px; height: 244px; margin-bottom: 24px; }
+    .overview-panel { position: relative; min-width: 0; padding: 16px 20px; border: 1px solid #51686570;
+      border-top: 2px solid #20bc9c; box-shadow: inset 0 0 32px #a4e9d01a, 0 4px 10px #0006;
+      background-color: #252727;
+      background-image: linear-gradient(95deg, #00ddb225, #00ddb204),
+        {% if card_background %}url('{{ card_background }}'){% else %}none{% endif %};
+      background-size: cover; background-position: center; }
+    .overview-panel::before { content: ""; position: absolute; top: 16px; bottom: 16px; left: 0; width: 3px;
+      background: #12e6bc; box-shadow: 0 0 12px #00e9b46e; }
+    .overview-title { display: flex; align-items: baseline; justify-content: space-between; gap: 16px;
+      height: 26px; margin: 0; color: #d1e2db; font-size: 20px; line-height: 26px; font-weight: 600; letter-spacing: 1px; }
+    .stat-cups { display: flex; align-items: center; justify-content: space-between;
+      margin: 6px 0 10px; padding-bottom: 6px; border-bottom: 1px solid #8da7982e;
+      color: #bfcfc6; font-size: 16px; }
+    .stat-cups strong { color: #e4d69c; font-size: 40px; line-height: 44px; font-variant-numeric: tabular-nums; }
+    .cup-value { display: flex; align-items: center; gap: 8px; }
+    .trophy-icon { width: 44px; height: 44px; object-fit: contain; filter: drop-shadow(0 0 5px #ccb56445); }
+    .metrics-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 18px; }
+    .metric { min-width: 0; }
+    .metric-label { display: block; color: #8ea99e; font-size: 14px; line-height: 20px; }
+    .metric-value { display: block; color: #f1f8f5; font-size: 26px; line-height: 30px; font-weight: 700; white-space: nowrap; }
+    .metric-value small { margin-left: 8px; color: #caba81; font-size: 18px; font-weight: 600; }
+    .metric-time { font-size: 23px; }
+    .favorite-list { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; margin-top: 12px; }
+    .favorite { display: flex; flex-direction: column; align-items: center; min-width: 0; gap: 4px; text-align: center; }
+    .favorite-art { position: relative; width: 64px; height: 64px; margin-bottom: 3px; }
+    .favorite-strategy-icon { display: block; width: 64px; height: 64px; object-fit: contain; filter: drop-shadow(0 0 9px #34d7bd75); }
+    .favorite-icon-missing { position: absolute; top: 0; left: 0; width: 64px; max-height: 64px;
+      overflow: hidden; overflow-wrap: anywhere; color: #a9beb7; font-size: 10px; line-height: 16px; }
+    .favorite-count { color: #f5fcf9; font-size: 25px; line-height: 28px; font-variant-numeric: tabular-nums; }
+    .favorite-count small { margin-left: 3px; color: #8ea99e; font-size: 14px; font-weight: 400; }
+    .favorite-name { width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      color: #bdcec5; font-size: 16px; line-height: 22px; }
+    .favorite-detail { color: #8ea99e; font-size: 14px; line-height: 22px; }
+    .favorite-detail b { color: #fff; font-weight: 700; }
+    .favorite-bond .bond-emblem { width: 64px; height: 64px; flex-basis: 64px; margin-bottom: 3px; }
+    .favorite-bond .bond-ring { width: 100%; height: 100%; }
+    .favorite-bond .bond-emblem::before { inset: 8px; }
+    .favorite-bond .bond-icon { width: 46.5px; height: 46.5px; }
+    .favorite-empty { grid-column: 1 / -1; align-self: center; padding: 54px 0;
+      color: #78988c; font-size: 16px; text-align: center; }
+    .records { display: grid; grid-template-columns: repeat({{ grid_columns }}, minmax(0, 1fr)); gap: 20px; align-items: start; }
+    .record { position: relative; display: flex; flex-direction: column;
+      width: 100%; min-height: 434px; padding: 18px 20px 16px;
+      overflow: hidden; border: 1px solid #51686557; box-shadow: inset 0 0 32px #a4e9d01a, 0 6px 11px #0009;
+      background-color: #252727;
+      background-image: linear-gradient(95deg, #00ddb225, #00ddb204),
+        {% if card_background %}url('{{ card_background }}'){% else %}none{% endif %};
+      background-size: cover; background-position: center; }
+    .record.failed { box-shadow: inset 0 0 32px #e6b2a314, 0 6px 11px #0009;
+      background-image: linear-gradient(95deg, #f7535228, #f7535204),
+        {% if card_background %}url('{{ card_background }}'){% else %}none{% endif %}; }
+    .record::before { content: ""; position: absolute; top: 20px; bottom: 20px; left: 0; width: 5px;
+      background: #12e6bc; box-shadow: 0 0 14px #00e9b46e; }
+    .record.failed::before { background: #ed686d; box-shadow: 0 0 14px #ed686d6e; }
+    .summary { display: flex; align-items: center; gap: 12px; min-width: 0; min-height: 64px; }
+    .round-box { display: flex; flex-direction: column; align-items: center; justify-content: center;
+      flex: 0 0 66px; height: 58px; border-right: 1px solid #8fb0a635; padding-right: 14px; color: #19e9bd; }
+    .round { font-size: 40px; font-weight: 700; line-height: 40px; }
+    .round-label { color: #8ca69e; font-size: 12px; line-height: 18px; }
+    .result { flex: 1; min-width: 0; }
+    .status { display: block; color: #19e9bd; font-size: 30px; line-height: 36px; overflow-wrap: anywhere; }
+    .failed .status, .failed .round-box { color: #f06c72; }
+    .time { color: #a9beb7; font-size: 16px; line-height: 22px; }
+    .record-index { flex-shrink: 0; margin-left: auto; color: #8da59e; font-size: 14px; line-height: 22px; }
+    .meta { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 32px;
+      margin-top: 16px; color: #a9beb7; font-size: 17px; line-height: 22px; }
+    .meta .sep { flex: 0 0 1px; height: 23px; background: #a3b6b53c; }
+    .mode, .difficulty { display: flex; align-items: center; gap: 9px; min-width: 0; overflow-wrap: anywhere; }
+    .team { display: flex; gap: 2px; align-items: flex-end; flex-shrink: 0; height: 24px; color: #a8b9b7; }
+    .team span { position: relative; width: 7px; height: 14px; background: currentColor; border-radius: 2px 2px 0 0; }
+    .team span::before { content: ""; position: absolute; left: 1px; top: -6px; width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+    .difficulty { color: #d7b970; }
+    .difficulty img { flex-shrink: 0; width: 26px; height: 26px; object-fit: contain;
+      filter: sepia(1) saturate(4) hue-rotate(345deg) drop-shadow(0 0 3px #dfa33e); }
+    .band { display: flex; align-items: center; justify-content: center; flex: 0 0 64px; width: 64px; height: 64px;
+      border-radius: 50%; background: radial-gradient(circle, #28d6ad18, #28d6ad09 50%, transparent 72%); }
+    .band-icon { display: block; width: 64px; height: 64px; object-fit: contain; filter: drop-shadow(0 0 8px #34d7bd8c); }
+    .band-missing { max-width: 64px; max-height: 58px; overflow: hidden; color: #a9beb7;
+      font-size: 11px; line-height: 14px; overflow-wrap: anywhere; text-align: center; }
+    .squad { display: grid; grid-template-columns: repeat(5, 76px); grid-auto-rows: var(--unit-height);
+      row-gap: var(--squad-row-gap); column-gap: 10px; padding-bottom: var(--equipment-overhang);
+      width: 420px; margin: 16px auto 0; align-content: center; }
+    .unit, .empty { position: relative; width: 76px; height: var(--unit-height); }
+    .unit { border: 1px solid #909d98; background: #323b3b; box-shadow: 0 2px 5px #0008; }
+    .unit.promoted { border-color: #b79b57; }
+    .unit::after { content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+      background: linear-gradient(180deg, transparent 50%, #09161575); }
+    .unit-avatar { display: block; width: 100%; height: 100%; object-fit: cover; }
+    .operator-level { position: absolute; z-index: 3; top: 20px; left: -7px; width: 23px; height: 28px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+      border: 1px solid #56615c; border-radius: 12px; background: #101816; color: #f7fffa;
+      font-size: 14px; line-height: 14px; font-weight: 600; box-shadow: 0 1px 4px #0008; }
+    .promoted .operator-level { border-color: #a5955e; text-shadow: 0 0 4px #e9d59e; }
+    .operator-phase { position: relative; flex: 0 0 10px; width: 10px; height: 10px; }
+    .operator-phase img { position: absolute; width: 20px; height: 20px; top: 50%; left: 50%;
+      transform: translate(-50%, -50%); object-fit: contain; }
+    .operator-level-label { color: #91a39b; font-size: 8px; line-height: 10px; }
+    .equipment-list { position: absolute; z-index: 2; bottom: calc(-1px - var(--equipment-overhang));
+      left: 50%; width: 59px; transform: translateX(-50%);
+      display: grid; grid-template-columns: repeat(2, 26px); gap: 7px; }
+    .equipment { position: relative; flex: 0 0 26px; width: 26px; height: 26px;
+      border: 1px solid #e3eae4; background: #14211edb; }
+    .equipment-icon { display: block; width: 100%; height: 100%; object-fit: contain; }
+    .equipment-missing { position: absolute; inset: 0; color: #e0e8dd; font-size: 16px; line-height: 22px; text-align: center; }
+    .equipment-unknown { position: absolute; z-index: 2; bottom: 4px; left: 0; right: 0;
+      color: #b0bcb4; font-size: 10px; line-height: 14px; text-align: center; text-shadow: 0 1px 3px #000; }
+    .badge { position: absolute; z-index: 4; top: -4px; left: -7px; min-width: 23px; height: 23px;
+      border: 1px solid currentColor; border-radius: 4px 4px 0 0; padding: 0 1px; background: #111a1b;
+      font: 700 14px/21px Georgia, serif; text-align: center; text-shadow: 0 0 5px currentColor; }
+    /* The 37px artwork has a 7px transparent inset: align its visible edge with the level pill. */
+    .level-icon { position: absolute; z-index: 4; top: -11px; left: -14px; width: 37px !important; height: 37px !important; object-fit: contain !important; }
+    .level-1, .level-2 { color: #e6e8e5; }
+    .level-3 { color: #20c7a6; }
+    .level-4 { color: #29adc2; }
+    .level-5 { color: #dfb652; }
+    .level-6 { color: #e88748; }
+    .empty { border: 1px solid #9ba9a760; background: #a5b9b409; }
+    .empty::after { content: ""; position: absolute; width: 62%; height: 1px; top: 49%; left: 19%; transform: rotate(-45deg); background: #93a29f32; }
+    .bonds { display: grid; grid-template-columns: repeat({{ bond_columns }}, minmax(0, 1fr));
+      grid-auto-rows: 66px; row-gap: 10px; column-gap: 8px; width: 420px; min-height: 66px; margin: 14px auto 0; }
+    .bond { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; }
+    .bond-emblem { position: relative; flex: 0 0 44px; width: 44px; height: 44px; }
+    .bond-emblem::before { content: ""; position: absolute; inset: 5.5px; border-radius: 50%;
+      background: radial-gradient(circle closest-side, #00ffc4cc 0%, #00ffc4cc 73.56%, #00ffc400 100%); }
+    .bond-ring { position: absolute; inset: 0; width: 44px; height: 44px; overflow: visible;
+      color: #00ffc4; filter: drop-shadow(0 0 2px #00ffc4); }
+    .bond-icon { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      display: block; width: 32px; height: 32px; object-fit: contain; filter: invert(1); }
+    .bond-layer { display: block; width: 100%; color: #fff; font-size: 16px; font-weight: 700;
+      line-height: 18px; text-align: center; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .bond-missing { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      width: 100%; max-height: 34px; overflow: hidden; overflow-wrap: anywhere;
+      color: #062a22; font-size: 10px; line-height: 16px; text-align: center; }
+    .no-bonds { grid-column: 1 / -1; align-self: center; color: #879e96; font-size: 14px; text-align: center; }
+    .empty-state { grid-column: 1 / -1; min-height: 220px; display: flex; align-items: center;
+      justify-content: center; font-size: 28px; color: #b9c9c5; }
+    .footer { display: flex; justify-content: flex-end; margin-top: 20px;
+      color: #8ea69f; font-size: 15px; line-height: 20px; }
+  </style>
+</head>
+<body>
+  <div class="asset-preloads" hidden aria-hidden="true">
+    {% for asset in [page_background, page_texture, card_background, header_decoration] %}
+    {% if asset %}<img src="{{ asset }}" alt="">{% endif %}
+    {% endfor %}
+  </div>
+  <main class="canvas">
+    <header class="page-heading">
+      <div class="player">
+        <h1>{% if season_logo %}<img class="season-logo" src="{{ season_logo }}" alt="卫戍协议：规程" onerror="this.style.display='none';this.nextElementSibling.hidden=false">{% endif %}<span class="title-text"{% if season_logo %} hidden{% endif %}>卫戍协议</span></h1>
+        <div class="nickname">Dr.{{ page.nickname }}</div>
+      </div>
+    </header>
+    <section class="overview" aria-label="赛季统计" data-record-count="{{ page.overview.total }}">
+      <div class="overview-panel season-overview">
+        <h2 class="overview-title">赛季总览</h2>
+        <div class="stat-cups"><span>总杯数</span><div class="cup-value">
+          {% set trophy_icon = page.overview.trophies | garrison_trophy_icon %}
+          {% if trophy_icon %}<img class="trophy-icon" src="{{ trophy_icon }}" alt="奖杯段位" onerror="this.style.display='none'">{% endif %}
+          <strong>{{ page.overview.trophies if page.overview.trophies is not none else '—' }}</strong>
+        </div></div>
+        <div class="metrics-grid">
+          <div class="metric"><span class="metric-label">总场次</span><strong class="metric-value stat-total">{{ page.overview.total }}</strong></div>
+          <div class="metric"><span class="metric-label">BOSS 击杀</span><strong class="metric-value stat-boss">{{ page.overview.boss_kills }}<small>隐秘 {{ page.overview.hidden_boss_kills }}</small></strong></div>
+          <div class="metric"><span class="metric-label">完成率</span><strong class="metric-value stat-completion">{{ page.overview.completion_rate }}</strong></div>
+          <div class="metric"><span class="metric-label">游戏时长</span><strong class="metric-value metric-time stat-duration">{{ page.overview.duration }}</strong></div>
+        </div>
+      </div>
+      <div class="overview-panel strategy-overview">
+        <h2 class="overview-title">常用策略</h2>
+        <div class="favorite-list">
+          {% for strategy in page.overview.strategies %}
+          {% set resource = band_resources.get(strategy.id, {}) %}
+          {% set strategy_name = resource.get('initiatorName') or resource.get('name') or strategy.id %}
+          {% set strategy_icon = strategy.id | garrison_band_icon %}
+          <div class="favorite favorite-strategy" data-strategy-id="{{ strategy.id }}" title="{{ strategy_name }}">
+            <div class="favorite-art">
+              {% if strategy_icon %}<img class="favorite-strategy-icon" src="{{ strategy_icon }}" alt="{{ strategy_name }}" onerror="this.style.display='none';this.nextElementSibling.hidden=false">{% endif %}
+              <span class="favorite-icon-missing"{% if strategy_icon %} hidden{% endif %}>{{ strategy_name }}</span>
+            </div>
+            <strong class="favorite-count">{{ strategy.count }}<small>场</small></strong>
+            <span class="favorite-name">{{ strategy_name }}</span>
+            <span class="favorite-detail">胜率 <b>{{ strategy.win_rate }}%</b></span>
+          </div>
+          {% else %}<div class="favorite-empty">暂无策略统计</div>{% endfor %}
+        </div>
+      </div>
+      <div class="overview-panel bond-overview">
+        <h2 class="overview-title">常用盟约</h2>
+        <div class="favorite-list">
+          {% for bond in page.overview.bonds %}
+          {% set bond_name = bond_resources.get(bond.id, {}).get('name', bond.id) %}
+          <div class="favorite favorite-bond" data-bond-id="{{ bond.id }}" title="{{ bond_name }}">
+            {{ bond_emblem(bond.id) }}
+            <strong class="favorite-count">{{ bond.count }}<small>场</small></strong>
+            <span class="favorite-name">{{ bond_name }}</span>
+            <span class="favorite-detail">最高 <b>{{ bond.max_layer }}</b></span>
+          </div>
+          {% else %}<div class="favorite-empty">暂无盟约统计</div>{% endfor %}
+        </div>
+      </div>
+    </section>
+    <div class="records">
+    {% for record in page.records %}
+    <section class="record{% if not record.success %} failed{% endif %}" data-record-id="{{ record.id }}" aria-label="{{ record.round }} {{ record.status }}">
+      <div class="summary">
+        {% set band_icon = record.band_id | garrison_band_icon %}
+        {% set band_resource = band_resources.get(record.band_id, {}) %}
+        {% set band_name = band_resource.get('initiatorName') or band_resource.get('name') or record.band_id or '策略未知' %}
+        <div class="round-box"><strong class="round">{{ record.round }}</strong><span class="round-label">回合</span></div>
+        <div class="result">
+          <strong class="status">{{ record.status }}</strong>
+          <time class="time">{{ record.time }}</time>
+        </div>
+        <div class="band" title="{{ band_name }}">
+          {% if band_icon %}<img class="band-icon" src="{{ band_icon }}" alt="{{ band_name }}" onerror="this.style.display='none';this.nextElementSibling.hidden=false">{% endif %}
+          <span class="band-missing"{% if band_icon %} hidden{% endif %}>{{ band_name }}</span>
+        </div>
+      </div>
+      <div class="squad" style="--unit-height: {{ record.unit_height }}px; --squad-row-gap: {{ record.squad_row_gap }}px; --equipment-overhang: {{ record.equipment_overhang }}px">
+        {% for unit in record.squad %}
+        <div class="unit{% if unit.merge_level is not none and unit.merge_level >= 1 %} promoted{% endif %}" title="{{ unit.name }} · {{ unit.badge }} · Lv.{{ unit.char_level if unit.char_level is not none else '—' }}">
+          <img class="unit-avatar" src="{{ unit.char_id | garrison_avatar_url if unit.char_id else placeholder }}" alt="{{ unit.name }}" data-fallback="{{ placeholder }}" onerror="this.onerror=null;this.src=this.dataset.fallback">
+          {% if 1 <= unit.level <= 6 %}
+          <img class="level-icon" src="../images/garrison/level/img_chess_level_{{ unit.level }}.png" alt="{{ unit.badge }}">
+          {% else %}<span class="badge level-{{ unit.level }}">{{ unit.badge }}</span>{% endif %}
+          {% set operator_badge = unit.evolve_phase | garrison_operator_badge(unit.merge_level) %}
+          <div class="operator-level" title="干员等级 · {{ unit.char_level if unit.char_level is not none else '未知' }}">
+            {% if operator_badge %}<span class="operator-phase"><img src="{{ operator_badge }}" alt="精英 {{ unit.evolve_phase }}"></span>{% else %}<span class="operator-level-label">Lv</span>{% endif %}
+            <span class="operator-level-value">{{ unit.char_level if unit.char_level is not none else '—' }}</span>
+          </div>
+          {% if unit.equips is none %}<span class="equipment-unknown">装备未知</span>
+          {% elif unit.equips %}<div class="equipment-list">
+            {% for equip in unit.equips %}
+            {% set equipment_resource = equipment_resources.get(equip.id, {}) %}
+            {% set equipment_icon = equip.id | garrison_equipment_icon %}
+            <div class="equipment" data-equipment-id="{{ equip.id }}" title="{{ equipment_resource.get('name', equip.id) }}{% if equipment_resource.get('isGolden') %} · 进阶{% endif %}">
+              {% if equipment_icon %}<img class="equipment-icon" src="{{ equipment_icon }}" alt="{{ equipment_resource.get('name', equip.id) }}" onerror="this.style.display='none';this.nextElementSibling.hidden=false">{% endif %}
+              <span class="equipment-missing"{% if equipment_icon %} hidden{% endif %}>?</span>
+            </div>
+            {% endfor %}
+          </div>{% endif %}
+        </div>
+        {% endfor %}
+        {% for _ in range(record.empty_slots) %}<div class="empty" aria-hidden="true"></div>{% endfor %}
+      </div>
+      <div class="bonds" aria-label="已激活盟约">
+        {% for bond in record.bonds %}
+        {% set bond_name = bond_resources.get(bond.id, {}).get('name', bond.id) %}
+        <div class="bond" data-bond-id="{{ bond.id }}" title="{{ bond_name }} · {{ bond.layer }}">
+          {{ bond_emblem(bond.id) }}
+          <span class="bond-layer">{{ bond.layer }}</span>
+        </div>
+        {% else %}<span class="no-bonds">暂无已激活盟约</span>{% endfor %}
+      </div>
+      <div class="meta">
+        <div class="mode">
+          {% if record.team_count %}<div class="team" aria-hidden="true">{% for _ in range(record.team_count) %}<span></span>{% endfor %}</div>{% endif %}
+          <span>{{ record.mode }}</span>
+        </div>
+        <i class="sep"></i>
+        <div class="difficulty">
+          {% if record.difficulty_key %}<img src="../images/garrison/mode/mode_{{ record.difficulty_key }}_icon.png" alt="">{% endif %}
+          <span>{{ record.difficulty }}</span>
+        </div>
+        <span class="record-index">#{{ record.index }}</span>
+      </div>
+    </section>
+    {% else %}
+    <section class="record empty-state">本赛季暂无卫戍协议战绩</section>
+    {% endfor %}
+    </div>
+    {% if page.total > 1 %}<footer class="footer"><span>第 {{ page.number }} / {{ page.total }} 张</span></footer>{% endif %}
+  </main>
+</body>
+</html>

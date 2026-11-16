@@ -29,6 +29,7 @@ from .arknights import RogueCareer as RogueCareer
 from .arknights import RogueData as RogueData
 from .arknights import RogueHistory as RogueHistory
 from .arknights import Status as Status
+from .arknights.garrison import GarrisonHistory as GarrisonHistory
 from .arknights import Topics as Topics
 from .binding import BindingApp as BindingApp
 from .binding import BindingCharacter as BindingCharacter

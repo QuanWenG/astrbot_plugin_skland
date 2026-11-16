@@ -1,10 +1,16 @@
 import json
+import hashlib
 import logging
 from urllib.parse import quote
 from datetime import datetime, timedelta
 
 from . import config as paths
 from .image_cache import register_missing_image
+from .garrison_assets import (
+    BAND_ICON_BASE, BOND_ICON_BASE, TROPHY_ICON_BASE, DECORATION_FILES, trophy_icon_id,
+    valid_band_id, valid_band_icon_url, valid_bond_id, valid_bond_icon_url, valid_decoration_url,
+    valid_equipment_id, valid_equipment_icon_url,
+)
 
 logger = logging.getLogger("astrbot")
 RES_DIR = paths.RES_DIR
@@ -113,6 +119,122 @@ def charId_to_avatarUrl(charId: str) -> str:
         logger.debug(f"Avatar not found locally, using URL: {img_url}")
         return img_url
     return img_path.as_uri()
+
+
+def garrison_band_icon(band_id: str, icon_url: str = "") -> str:
+    """Use the real strategy image, downloading missing icons into the cache."""
+    if not valid_band_id(band_id):
+        return ""
+    root = paths.RES_DIR / "images" / "garrison"
+    cached = paths.CACHE_DIR / "garrison/band" / f"{band_id}.png"
+    if cached.is_file():
+        return cached.as_uri()
+    bundled = root / "band" / f"{band_id}.png"
+    if bundled.is_file():
+        return bundled.as_uri()
+    url = icon_url if valid_band_icon_url(icon_url) else f"{BAND_ICON_BASE}{band_id}.png"
+    register_missing_image(url, cached)
+    return url
+
+
+def garrison_avatar_url(char_id: str) -> str:
+    """Reuse the shared avatar cache and cache successful first-time downloads."""
+    if not char_id or len(char_id) > 160 or not all(c.isalnum() or c in "_-@#" for c in char_id):
+        return (paths.RES_DIR / "images/garrison/operator_empty.svg").as_uri()
+    avatar_id = char_id.replace("@", "_").replace("#", "_")
+    image_path = paths.CACHE_DIR / "avatar" / f"{avatar_id}.png"
+    if image_path.is_file():
+        return image_path.as_uri()
+    image_url = f"https://web.hycdn.cn/arknights/game/assets/char/avatar/{quote(char_id, safe='')}.png"
+    register_missing_image(image_url, image_path)
+    return image_url
+
+
+def garrison_bond_icon(bond_id: str, icon_url: str = "") -> str:
+    """Reuse official bond artwork locally, caching any missing image."""
+    if not valid_bond_id(bond_id):
+        return ""
+    cached = paths.CACHE_DIR / "garrison/bond" / f"{bond_id}.png"
+    if cached.is_file():
+        return cached.as_uri()
+    bundled = paths.RES_DIR / "images/garrison/bond" / f"{bond_id}.png"
+    if bundled.is_file():
+        return bundled.as_uri()
+    url = icon_url if valid_bond_icon_url(icon_url) else f"{BOND_ICON_BASE}{bond_id}.png"
+    register_missing_image(url, cached)
+    return url
+
+
+def garrison_portrait_url(char_id: str) -> str:
+    if not char_id or len(char_id) > 160 or not all(c.isalnum() or c in "_-@#" for c in char_id):
+        return (paths.RES_DIR / "images/garrison/operator_empty.svg").as_uri()
+    return charId_to_portraitUrl(char_id)
+
+
+def garrison_operator_badge(phase: int | None, merge: int | None) -> str:
+    if phase not in (0, 1, 2):
+        return ""
+    filename = "promoted.png" if merge is not None and merge >= 1 else f"phase_{phase}.png"
+    bundled = paths.RES_DIR / "images/garrison/operator" / filename
+    if bundled.is_file():
+        return bundled.as_uri()
+    fallback = paths.RES_DIR / "images/ark_card/elite" / f"elite_{phase}.png"
+    return fallback.as_uri() if fallback.is_file() else ""
+
+
+def garrison_equipment_icon(item_id: str, icon_url: str = "") -> str:
+    if not valid_equipment_id(item_id):
+        return ""
+    cached = paths.CACHE_DIR / "garrison/equipment" / f"{item_id}.png"
+    if cached.is_file():
+        return cached.as_uri()
+    bundled = paths.RES_DIR / "images/garrison/equipment" / f"{item_id}.png"
+    if bundled.is_file():
+        return bundled.as_uri()
+    if not valid_equipment_icon_url(icon_url):
+        return ""
+    register_missing_image(icon_url, cached)
+    return icon_url
+
+
+def garrison_trophy_icon(trophies: int | None) -> str:
+    icon = trophy_icon_id(trophies)
+    if not icon:
+        return ""
+    cached = paths.CACHE_DIR / "garrison/trophy" / f"{icon}.png"
+    if cached.is_file():
+        return cached.as_uri()
+    bundled = paths.RES_DIR / "images/garrison/trophy" / f"{icon}.png"
+    if bundled.is_file():
+        return bundled.as_uri()
+    url = f"{TROPHY_ICON_BASE}{icon}.png"
+    register_missing_image(url, cached)
+    return url
+
+
+def garrison_decoration(name: str) -> str:
+    """Read bundled official artwork, or download and cache the registered URL."""
+    filename = DECORATION_FILES.get(name)
+    if not filename:
+        return ""
+    root = paths.RES_DIR / "images/garrison"
+    bundled = root / "decorations" / filename
+    if bundled.is_file():
+        return bundled.as_uri()
+    try:
+        metadata = json.loads((root / "decorations.json").read_text(encoding="utf-8"))
+        url = metadata["assets"][name]["url"]
+        if not isinstance(url, str) or not valid_decoration_url(url):
+            return ""
+    except (OSError, ValueError, KeyError, TypeError):
+        return ""
+    digest = hashlib.sha256(url.encode("utf-8")).hexdigest()[:12]
+    stem, extension = filename.rsplit(".", 1)
+    cached = paths.CACHE_DIR / "garrison/decorations" / f"{stem}-{digest}.{extension}"
+    if cached.is_file():
+        return cached.as_uri()
+    register_missing_image(url, cached)
+    return url
 
 
 def charId_to_portraitUrl(charId: str) -> str:

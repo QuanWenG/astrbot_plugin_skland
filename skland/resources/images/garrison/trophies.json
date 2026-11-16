@@ -1,0 +1,47 @@
+{
+  "source": "https://raw.githubusercontent.com/Kengxxiao/ArknightsGameData/master/zh_CN/gamedata/excel/activity_table.json",
+  "field": "autoChessData.medalDataList",
+  "seasonId": "act3autochess",
+  "tiers": [
+    {
+      "minimum": 0,
+      "iconId": "trophy_level1_icon",
+      "url": "https://raw.githubusercontent.com/ArknightsAssets/ArknightsAssets2/cn/assets/dyn/ui/autochess/%5Buc%5Dautochessouter/arts/medalicon/trophy_level1_icon.png"
+    },
+    {
+      "minimum": 10,
+      "iconId": "trophy_level2_icon",
+      "url": "https://raw.githubusercontent.com/ArknightsAssets/ArknightsAssets2/cn/assets/dyn/ui/autochess/%5Buc%5Dautochessouter/arts/medalicon/trophy_level2_icon.png"
+    },
+    {
+      "minimum": 30,
+      "iconId": "trophy_level3_icon",
+      "url": "https://raw.githubusercontent.com/ArknightsAssets/ArknightsAssets2/cn/assets/dyn/ui/autochess/%5Buc%5Dautochessouter/arts/medalicon/trophy_level3_icon.png"
+    },
+    {
+      "minimum": 60,
+      "iconId": "trophy_level4_icon",
+      "url": "https://raw.githubusercontent.com/ArknightsAssets/ArknightsAssets2/cn/assets/dyn/ui/autochess/%5Buc%5Dautochessouter/arts/medalicon/trophy_level4_icon.png"
+    },
+    {
+      "minimum": 100,
+      "iconId": "trophy_level5_icon",
+      "url": "https://raw.githubusercontent.com/ArknightsAssets/ArknightsAssets2/cn/assets/dyn/ui/autochess/%5Buc%5Dautochessouter/arts/medalicon/trophy_level5_icon.png"
+    },
+    {
+      "minimum": 150,
+      "iconId": "trophy_level6_icon",
+      "url": "https://raw.githubusercontent.com/ArknightsAssets/ArknightsAssets2/cn/assets/dyn/ui/autochess/%5Buc%5Dautochessouter/arts/medalicon/trophy_level6_icon.png"
+    },
+    {
+      "minimum": 200,
+      "iconId": "trophy_level7_icon",
+      "url": "https://raw.githubusercontent.com/ArknightsAssets/ArknightsAssets2/cn/assets/dyn/ui/autochess/%5Buc%5Dautochessouter/arts/medalicon/trophy_level7_icon.png"
+    },
+    {
+      "minimum": 300,
+      "iconId": "trophy_level8_icon",
+      "url": "https://raw.githubusercontent.com/ArknightsAssets/ArknightsAssets2/cn/assets/dyn/ui/autochess/%5Buc%5Dautochessouter/arts/medalicon/trophy_level8_icon.png"
+    }
+  ]
+}

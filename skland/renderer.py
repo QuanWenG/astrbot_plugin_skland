@@ -118,7 +118,7 @@ class LocalHtmlRenderer:
         env = Environment(loader=FileSystemLoader(root), autoescape=True)
         if filters:
             env.filters.update(filters)
-        if config.ark_portrait_cache_enabled:
+        if config.ark_portrait_cache_enabled or template_name == "garrison.html.jinja2":
             with collect_missing_images() as pending_images:
                 html = env.get_template(template_name).render(**templates)
         else:
@@ -162,7 +162,7 @@ class LocalHtmlRenderer:
             try:
                 write_cached_image(path, await response.body())
             except Exception as exc:
-                logger.warning("立绘缓存写入失败 %s: %s", response.url, exc)
+                logger.warning("图片缓存写入失败 %s: %s", response.url, exc)
 
         def on_response(response) -> None:
             if response.url in pending_by_url:

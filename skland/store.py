@@ -1,5 +1,6 @@
 """SQLite persistence with stable account/role identities and legacy upgrades."""
 import json
+import hashlib
 import logging
 import time
 from contextlib import asynccontextmanager
@@ -10,9 +11,10 @@ from pathlib import Path
 import aiosqlite
 
 from .models import Account, Character, GachaRecord, SanitySubscription
+from .schemas.arknights.garrison import GARRISON_SEASON, GarrisonHistory, GarrisonRecord
 
 logger = logging.getLogger("astrbot")
-SCHEMA_VERSION = 5
+SCHEMA_VERSION = 6
 DDL = (
     """CREATE TABLE accounts (id INTEGER PRIMARY KEY AUTOINCREMENT, owner_id TEXT NOT NULL,
     access_token TEXT, cred TEXT NOT NULL, cred_token TEXT NOT NULL, user_id TEXT, UNIQUE(owner_id,user_id))""",
@@ -53,6 +55,41 @@ SUBSCRIPTION_DDL = (
     "CREATE TABLE private_sessions (owner_id TEXT PRIMARY KEY,private_umo TEXT NOT NULL)",
 )
 
+GARRISON_DDL = (
+    """CREATE TABLE garrison_records (
+    character_id INTEGER NOT NULL REFERENCES characters(id) ON DELETE CASCADE,
+    season_id TEXT NOT NULL, record_key TEXT NOT NULL, payload TEXT NOT NULL,
+    game_end_ts INTEGER NOT NULL, first_seen INTEGER NOT NULL, updated_at INTEGER NOT NULL,
+    PRIMARY KEY(character_id,season_id,record_key))""",
+)
+
+
+def _merge_garrison_record(previous: dict | None, incoming: dict) -> dict:
+    """Keep known per-unit details when a later match omits optional fields."""
+    merged = (previous or {}) | incoming
+    if not previous or "chessSquad" not in incoming:
+        return merged
+    old_squad = previous.get("chessSquad", [])
+    squad = []
+    for unit in incoming["chessSquad"]:
+        chess_id = unit.get("chessId")
+        char_id = unit.get("charId") or unit.get("chessInfo", {}).get("charId")
+        candidates = [old for old in old_squad if chess_id and old.get("chessId") == chess_id]
+        if not candidates and char_id:
+            candidates = [old for old in old_squad
+                          if (old.get("charId") or old.get("chessInfo", {}).get("charId")) == char_id
+                          and (not chess_id or not old.get("chessId"))]
+        if len(candidates) == 1:
+            old = candidates[0]
+            current = old | unit
+            if "chessInfo" in unit:
+                current["chessInfo"] = old.get("chessInfo", {}) | unit["chessInfo"]
+            squad.append(current)
+        else:
+            squad.append(unit)
+    merged["chessSquad"] = squad
+    return merged
+
 
 class SklandStore:
     def __init__(self, path: Path) -> None:
@@ -77,7 +114,7 @@ class SklandStore:
             version = (await (await db.execute("PRAGMA user_version")).fetchone())[0]
             if version == SCHEMA_VERSION:
                 return
-            if version not in (0, 3, 4):
+            if version not in (0, 3, 4, 5):
                 raise RuntimeError(f"不支持的数据库版本：{version}，请保留原库")
             tables = {row[0] for row in await (await db.execute(
                 "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
@@ -86,7 +123,7 @@ class SklandStore:
                 raise RuntimeError("未知数据库结构，未执行迁移")
             if tables:
                 backup = self.path.with_name(
-                    self.path.name + ".pre-v5-" + datetime.now().strftime("%Y%m%d%H%M%S%f") + ".bak"
+                    self.path.name + f".pre-v{SCHEMA_VERSION}-" + datetime.now().strftime("%Y%m%d%H%M%S%f") + ".bak"
                 )
                 async with aiosqlite.connect(backup) as destination:
                     await db.backup(destination)
@@ -105,7 +142,10 @@ class SklandStore:
                     await db.execute(statement)
                 if old:
                     await self._migrate(db, old)
-            await self._upgrade_subscriptions(db)
+            if version in (0, 3, 4):
+                await self._upgrade_subscriptions(db)
+            for statement in GARRISON_DDL:
+                await db.execute(statement)
             await db.execute(f"PRAGMA user_version={SCHEMA_VERSION}")
         if self.migration_summary:
             logger.info("森空岛数据库迁移：%s", self.migration_summary)
@@ -434,6 +474,51 @@ class SklandStore:
         async with self.connection() as db:
             row = await (await db.execute("SELECT payload FROM rogue_cache WHERE owner_id=?", (owner_id,))).fetchone()
             return json.loads(row[0]) if row else None
+
+    async def merge_garrison_history(
+        self, owner_id: str, character_id: int, history: GarrisonHistory, *, season_id: str = GARRISON_SEASON,
+    ) -> GarrisonHistory:
+        """Atomically merge overlapping server windows without deleting older matches."""
+        async with self.connection() as db:
+            await db.execute("BEGIN IMMEDIATE")
+            if not await (await db.execute(
+                "SELECT 1 FROM characters WHERE id=? AND owner_id=? AND app_code='arknights' AND is_available=1",
+                (character_id, owner_id),
+            )).fetchone():
+                raise ValueError("角色已变化或解绑，请重新查询卫戍协议")
+            rows = await (await db.execute(
+                "SELECT record_key,payload FROM garrison_records WHERE character_id=? AND season_id=?",
+                (character_id, season_id),
+            )).fetchall()
+            saved = {row["record_key"]: json.loads(row["payload"]) for row in rows}
+            added = 0
+            now = int(time.time())
+            for record in history.records:
+                incoming = record.model_dump(mode="json", exclude_unset=True)
+                if record.id:
+                    key = "id:" + record.id
+                else:
+                    # Valid API records have an ID. A stable timestamp identity also
+                    # keeps ID-less responses from being counted on every query.
+                    identity = [record.gameStartTs or record.gameEndTs, record.modeType, record.modeDifficulty]
+                    if not identity[0]:
+                        identity = incoming
+                    key = "fallback:" + hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest()
+                previous = saved.get(key)
+                merged = _merge_garrison_record(previous, incoming)
+                if previous == merged:
+                    continue
+                canonical = GarrisonRecord.model_validate(merged)
+                await db.execute("""INSERT INTO garrison_records VALUES (?,?,?,?,?,?,?)
+                    ON CONFLICT(character_id,season_id,record_key) DO UPDATE SET
+                    payload=excluded.payload,game_end_ts=excluded.game_end_ts,updated_at=excluded.updated_at""",
+                    (character_id, season_id, key, json.dumps(merged, ensure_ascii=False, sort_keys=True),
+                     canonical.gameEndTs, now, now))
+                added += previous is None
+                saved[key] = merged
+            records = [GarrisonRecord.model_validate(payload) for payload in saved.values()]
+            records.sort(key=lambda item: (item.gameEndTs, item.id), reverse=True)
+            return GarrisonHistory(records=records, is_archived=True, new_count=added)
 
     async def save_context(self, owner, session, kind, payload, *, message_id="", ttl=300):
         async with self.connection() as db:

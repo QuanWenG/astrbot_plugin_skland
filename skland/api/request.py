@@ -3,6 +3,7 @@ import hashlib
 import hmac
 import json
 import logging
+from base64 import b64decode
 from datetime import datetime
 from typing import Literal
 from urllib.parse import urlparse, urlencode
@@ -12,6 +13,7 @@ from pydantic import TypeAdapter
 
 from ..exception import LoginException, RequestException, UnauthorizedException
 from ..models import Character
+from . import server_clock
 from ..schemas import (
     CRED,
     ArkCard,
@@ -26,6 +28,7 @@ from ..schemas import (
     GachaCate,
     GachaResponse,
     RogueData,
+    GarrisonHistory,
     WarEchoes,
 )
 
@@ -82,6 +85,8 @@ class SklandAPI:
         method: Literal["get", "post"],
         query_body: dict | None = None,
         use_did: bool = False,
+        battle_profile: bool = False,
+        timestamp_override: int | None = None,
     ) -> dict:
         """获取带sign请求头
 
@@ -91,9 +96,13 @@ class SklandAPI:
             method: 请求方法。
             query_body: POST 请求体。
             use_did: 是否获取并使用设备 ID 参与签名计算。
+            battle_profile: 使用官方卫戍战绩网页的签名头，沿用已有 cred 和 token。
+            timestamp_override: 使用已经校准的服务器时间生成请求签名。
         """
-        timestamp = int(datetime.now().timestamp()) - 1
+        timestamp = int(datetime.now().timestamp()) - 1 if timestamp_override is None else timestamp_override
         header_for_sign = {**cls._header_for_sign}
+        if battle_profile:
+            header_for_sign.update(platform="3", vName="1.0.0")
         if use_did:
             from .dId import get_dId
 
@@ -252,6 +261,98 @@ class SklandAPI:
                 return RogueData(**response.json()["data"])
             except httpx.HTTPError as e:
                 raise RequestException(f"获取肉鸽数据失败: {e}") from e
+
+    @classmethod
+    async def garrison_history(cls, cred: CRED, uid: str) -> GarrisonHistory:
+        """Use the official battle-history API, retaining promoted equipment IDs."""
+        if not uid:
+            raise RequestException("缺少明日方舟角色 UID，请先使用“角色更新”")
+        query = urlencode({"activityId": "act3autochess", "uid": uid})
+        request_url = f"{base_url.removesuffix('/v1')}/ms/game/arknights/garrison/info?{query}"
+        extra_headers = {
+            "x-transformed": "base64", "Origin": "https://act.skland.com",
+            "Referer": "https://act.skland.com/arknights/auto-chess?activityId=act3autochess",
+        }
+        async with httpx.AsyncClient() as client:
+            try:
+                for attempt in range(2):
+                    sign_options = {"method": "get", "battle_profile": True}
+                    timestamp = server_clock.BATTLE_CLOCK.now()
+                    if timestamp is not None:
+                        sign_options["timestamp_override"] = timestamp
+                    headers = await cls.get_sign_header(cred, request_url, **sign_options)
+                    response = await client.get(request_url, headers={**headers, **extra_headers})
+                    try:
+                        payload = response.json()
+                    except ValueError as exc:
+                        if response.status_code == 401:
+                            raise UnauthorizedException("获取卫戍协议战绩失败：森空岛认证已失效") from exc
+                        response.raise_for_status()
+                        raise RequestException("卫戍协议战绩响应不是有效 JSON") from exc
+                    if not isinstance(payload, dict):
+                        raise RequestException("卫戍协议战绩响应格式无效")
+                    calibrated = server_clock.BATTLE_CLOCK.observe(payload, response.headers)
+                    if payload.get("code") != 10003:
+                        break
+                    if attempt or not calibrated:
+                        raise RequestException("获取卫戍协议战绩失败（错误码 10003）：请求时间校准失败，请稍后重试")
+                code = payload.get("code")
+                if code == 10002:
+                    raise LoginException("获取卫戍协议战绩失败：森空岛登录已失效")
+                if response.status_code == 401 or code == 10000:
+                    raise UnauthorizedException("获取卫戍协议战绩失败：森空岛认证已失效")
+                if code != 0:
+                    detail = payload.get("message") or payload.get("msg")
+                    if isinstance(detail, str):
+                        for secret in (cred.cred, cred.token):
+                            if secret:
+                                detail = detail.replace(secret, "[已隐藏]")
+                        detail = " ".join(detail.split())[:200]
+                    else:
+                        detail = ""
+                    reason = f"错误码 {code}" if code is not None else "响应缺少错误码"
+                    if response.is_error:
+                        reason += f"，HTTP {response.status_code}"
+                    raise RequestException(f"获取卫戍协议战绩失败（{reason}）" + (f"：{detail}" if detail else ""))
+                response.raise_for_status()
+                data = payload.get("data")
+                # OneFetch on the official page decodes data.content when this
+                # header is set. Accept plain JSON too, as some responses omit it.
+                if isinstance(data, dict) and "content" in data:
+                    try:
+                        data = json.loads(b64decode(data["content"], validate=True).decode("utf-8"))
+                    except (ValueError, TypeError, UnicodeError) as exc:
+                        raise RequestException("卫戍协议战绩响应解码失败") from exc
+                if not isinstance(data, dict) or "history" not in data:
+                    raise RequestException("卫戍协议战绩响应缺少 history 数据")
+                history = data["history"]
+                if history is None:
+                    return GarrisonHistory()
+                if not isinstance(history, dict):
+                    raise RequestException("卫戍协议战绩 history 格式无效")
+                records = []
+                seen = set()
+                for field in ("records", "favourRecords"):
+                    entries = history.get(field)
+                    if entries is None:
+                        continue
+                    if not isinstance(entries, list):
+                        raise RequestException("卫戍协议战绩记录列表格式无效")
+                    for record in entries:
+                        if not isinstance(record, dict):
+                            raise RequestException("卫戍协议单局战绩格式无效")
+                        key = record.get("id")
+                        if not key or key not in seen:
+                            records.append(record)
+                        if key:
+                            seen.add(key)
+                return GarrisonHistory.model_validate({"records": records})
+            except httpx.HTTPStatusError as exc:
+                raise RequestException(f"获取卫戍协议战绩失败（HTTP {exc.response.status_code}）") from exc
+            except httpx.HTTPError as exc:
+                raise RequestException(f"获取卫戍协议战绩失败：{type(exc).__name__}") from exc
+            except (TypeError, ValueError) as exc:
+                raise RequestException("卫戍协议战绩数据格式无效") from exc
 
     @classmethod
     async def get_gacha_categories(

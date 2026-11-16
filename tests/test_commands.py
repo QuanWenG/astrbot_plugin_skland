@@ -35,6 +35,7 @@ def test_all_source_shortcuts_are_registered():
         "终末地抽卡记录",
         "终末地抽卡更新",
         "战绩详情",
+        "卫戍协议",
         "收藏战绩详情",
         "树海肉鸽",
         "界园肉鸽",

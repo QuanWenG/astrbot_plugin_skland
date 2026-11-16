@@ -21,6 +21,7 @@ from .schemas import (
     OperatorRoster,
     OperatorRosterQuery,
     RogueData,
+    GarrisonHistory,
 )
 from .schemas.endfield.gacha.base import EfGachaContentPool
 from .store import SklandStore
@@ -113,7 +114,7 @@ class SklandService:
         async with self.bindings.exclusive(owner_id):
             accounts = await self.store.list_accounts(owner_id)
             if not accounts:
-                raise ValueError("尚未绑定森空岛账号")
+                raise ValueError("尚未绑定森空岛账号，请使用 /扫码绑定")
             for account in accounts:
                 try:
                     if not account.user_id:
@@ -411,6 +412,15 @@ class SklandService:
         if not payload:
             raise ValueError("暂无肉鸽战绩缓存，请先查询一次肉鸽战绩")
         return TypeAdapter(RogueData).validate_python(payload)
+
+    async def garrison_history(
+        self, owner_id: str, identity: int | None = None
+    ) -> tuple[Character, GarrisonHistory]:
+        char = await self.require_character(owner_id, ARKNIGHTS, identity)
+        account = await self.require_account(owner_id, char.account_id)
+        history = await self._with_refresh(account, lambda cred: SklandAPI.garrison_history(cred, char.uid))
+        history = await self.store.merge_garrison_history(owner_id, char.id, history)
+        return char, history
 
     async def arknights_gacha(
         self, owner_id: str, identity: int | None = None

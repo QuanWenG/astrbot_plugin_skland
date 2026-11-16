@@ -1,8 +1,9 @@
-"""Render-time cache bridge for deterministic upstream portrait URLs."""
+"""Render-time cache bridge for deterministic upstream image URLs."""
 
 from __future__ import annotations
 
 import os
+from io import BytesIO
 from contextlib import contextmanager
 from contextvars import ContextVar
 from pathlib import Path
@@ -10,14 +11,21 @@ from typing import Iterator
 from urllib.parse import urlsplit
 from uuid import uuid4
 
+from PIL import Image, UnidentifiedImageError
+
 from . import config as paths
+from .garrison_assets import valid_decoration_url, valid_trophy_icon_url
 
 PendingImage = tuple[str, Path]
 _pending_images: ContextVar[set[PendingImage] | None] = ContextVar(
     "skland_pending_images", default=None
 )
 _ALLOWED_PREFIXES = (
+    "/arknights/game/assets/auto_chess/band_icon/",
+    "/arknights/game/assets/auto_chess/bond_icon/",
+    "/arknights/game/assets/char/avatar/",
     "/arknights/game/assets/char/portrait/",
+    "/arknights/game/assets/char_skill/",
     "/arknights/game/assets/char_skin/portrait/",
 )
 
@@ -43,9 +51,13 @@ def _is_allowed(url: str, path: Path) -> bool:
         parsed = urlsplit(url)
         return (
             parsed.scheme == "https"
-            and parsed.hostname == "web.hycdn.cn"
-            and any(parsed.path.startswith(prefix) for prefix in _ALLOWED_PREFIXES)
             and path.resolve().is_relative_to(paths.CACHE_DIR.resolve())
+            and ((parsed.hostname == "web.hycdn.cn"
+                  and any(parsed.path.startswith(prefix) for prefix in _ALLOWED_PREFIXES))
+                 or (valid_decoration_url(url)
+                     and path.resolve().is_relative_to((paths.CACHE_DIR / "garrison/decorations").resolve()))
+                 or (valid_trophy_icon_url(url)
+                     and path.resolve().is_relative_to((paths.CACHE_DIR / "garrison/trophy").resolve())))
         )
     except (OSError, ValueError):
         return False
@@ -54,6 +66,11 @@ def _is_allowed(url: str, path: Path) -> bool:
 def write_cached_image(path: Path, body: bytes) -> None:
     """Atomically store a validated image response inside the plugin cache."""
     if not body or len(body) > 10 * 1024 * 1024 or path.exists():
+        return
+    try:
+        with Image.open(BytesIO(body)) as decoded:
+            decoded.verify()
+    except (UnidentifiedImageError, OSError, ValueError, SyntaxError):
         return
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_name(f".{path.name}.{os.getpid()}.{uuid4().hex}.tmp")

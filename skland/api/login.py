@@ -2,6 +2,7 @@ import httpx
 
 from ..exception import LoginException, RequestException
 from ..schemas import CRED
+from . import server_clock
 
 skland_app_code = "4ca99fa6b56cc2ba"
 web_app_code = "be36d44aa36bfb5b"
@@ -23,6 +24,7 @@ class SklandLoginAPI:
         except ValueError:
             payload = None
         codes = [payload.get(key) for key in ("code", "status")] if isinstance(payload, dict) else []
+        server_clock.BATTLE_CLOCK.observe(payload, response.headers)
         if response.status_code == 401 or any(code in (10000, 10002) for code in codes):
             raise LoginException(f"{operation}：登录凭证已失效，请重新扫码绑定。")
         try:

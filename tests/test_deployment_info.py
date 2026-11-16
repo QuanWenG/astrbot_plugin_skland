@@ -22,7 +22,7 @@ async def test_version_reports_loaded_code_without_account_requests(plugin):
     obj, _ = plugin
     obj.service.require_account = AsyncMock(side_effect=AssertionError("credential lookup"))
     result = texts(await run(obj, Event(group="g"), ["version"]))
-    assert "运行版本：2.7.6" in result
+    assert "运行版本：2.7.29" in result
     assert "角色接口 401 恢复：已加载" in result
     assert "凭证自动恢复链：已加载" in result
     assert "接口文件" not in result and "服务文件" not in result

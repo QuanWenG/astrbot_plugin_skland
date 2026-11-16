@@ -1,0 +1,372 @@
+{
+  "source": "https://zonai.skland.com/api/v1/game/garrison/guide/resource?seasonId=act3autochess",
+  "seasonId": "act3autochess",
+  "strategies": [
+    {
+      "strategyId": "band_amiya",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/band_icon/band_amiya.png",
+      "initiatorName": "阿米娅",
+      "name": "众志合一"
+    },
+    {
+      "strategyId": "band_sarkazb",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/band_icon/band_sarkazb.png",
+      "initiatorName": "歌利亚",
+      "name": "坚不可摧"
+    },
+    {
+      "strategyId": "band_emperor",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/band_icon/band_emperor.png",
+      "initiatorName": "大帝",
+      "name": "加急调派"
+    },
+    {
+      "strategyId": "band_qalaisa",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/band_icon/band_qalaisa.png",
+      "initiatorName": "卡莱莎",
+      "name": "食腐之蝶"
+    },
+    {
+      "strategyId": "band_ioleta",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/band_icon/band_ioleta.png",
+      "initiatorName": "伊奥莱塔·罗素",
+      "name": "统御号令"
+    },
+    {
+      "strategyId": "band_survive",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/band_icon/band_survive.png",
+      "initiatorName": "百炼嘉维尔",
+      "name": "意志鼓舞"
+    },
+    {
+      "strategyId": "band_price",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/band_icon/band_price.png",
+      "initiatorName": "天空盒",
+      "name": "内部货源"
+    },
+    {
+      "strategyId": "band_transfer",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/band_icon/band_transfer.png",
+      "initiatorName": "风丸",
+      "name": "纸片替身"
+    },
+    {
+      "strategyId": "band_dance",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/band_icon/band_dance.png",
+      "initiatorName": "妮芙",
+      "name": "溃心领域"
+    },
+    {
+      "strategyId": "band_copy",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/band_icon/band_copy.png",
+      "initiatorName": "夕",
+      "name": "幻画为真"
+    },
+    {
+      "strategyId": "band_jenga",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/band_icon/band_jenga.png",
+      "initiatorName": "但书",
+      "name": "条文修正"
+    },
+    {
+      "strategyId": "band_evolve",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/band_icon/band_evolve.png",
+      "initiatorName": "大嘴莫布",
+      "name": "全场聚焦"
+    },
+    {
+      "strategyId": "band_jesica",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/band_icon/band_jesica.png",
+      "initiatorName": "杰西卡",
+      "name": "集结指示"
+    },
+    {
+      "strategyId": "band_takecare",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/band_icon/band_takecare.png",
+      "initiatorName": "华法琳",
+      "name": "重点监护"
+    },
+    {
+      "strategyId": "band_shield",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/band_icon/band_shield.png",
+      "initiatorName": "桑葚",
+      "name": "药枚实验"
+    },
+    {
+      "strategyId": "band_smith",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/band_icon/band_smith.png",
+      "initiatorName": "奥达",
+      "name": "全力熔铸"
+    },
+    {
+      "strategyId": "band_weakness",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/band_icon/band_weakness.png",
+      "initiatorName": "陈",
+      "name": "以己之长"
+    },
+    {
+      "strategyId": "band_lmlee",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/band_icon/band_lmlee.png",
+      "initiatorName": "老鲤",
+      "name": "得闲饮茶"
+    },
+    {
+      "strategyId": "band_fang",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/band_icon/band_fang.png",
+      "initiatorName": "芬",
+      "name": "协力共进"
+    },
+    {
+      "strategyId": "band_amedic",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/band_icon/band_amedic.png",
+      "initiatorName": "Touch",
+      "name": "外勤医疗"
+    },
+    {
+      "strategyId": "band_mech",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/band_icon/band_mech.png",
+      "initiatorName": "森蚺",
+      "name": "暴躁铁皮"
+    },
+    {
+      "strategyId": "band_treasure",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/band_icon/band_treasure.png",
+      "initiatorName": "寻宝人",
+      "name": "宝藏探机"
+    },
+    {
+      "strategyId": "band_upgrade",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/band_icon/band_upgrade.png",
+      "initiatorName": "缪尔赛思",
+      "name": "至纯凝结"
+    },
+    {
+      "strategyId": "band_breakaway",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/band_icon/band_breakaway.png",
+      "initiatorName": "Misery",
+      "name": "消解空间"
+    },
+    {
+      "strategyId": "band_damaztic",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/band_icon/band_damaztic.png",
+      "initiatorName": "“变形者集群”",
+      "name": "变形同构"
+    },
+    {
+      "strategyId": "band_fund",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/band_icon/band_fund.png",
+      "initiatorName": "小贾斯汀",
+      "name": "私募基金"
+    },
+    {
+      "strategyId": "band_gain",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/band_icon/band_gain.png",
+      "initiatorName": "铃兰",
+      "name": "御守之力"
+    },
+    {
+      "strategyId": "band_prepfin",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/band_icon/band_prepfin.png",
+      "initiatorName": "苏苏洛",
+      "name": "强制休整"
+    },
+    {
+      "strategyId": "band_mess",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/band_icon/band_mess.png",
+      "initiatorName": "昆图斯",
+      "name": "不稳定要素"
+    },
+    {
+      "strategyId": "band_protect",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/band_icon/band_protect.png",
+      "initiatorName": "信仰搅拌机",
+      "name": "献身护卫"
+    },
+    {
+      "strategyId": "band_random",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/band_icon/band_random.png",
+      "initiatorName": "“追随者们”",
+      "name": "好多委托！"
+    },
+    {
+      "strategyId": "band_cannot",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/band_icon/band_cannot.png",
+      "initiatorName": "坎诺特",
+      "name": "利滚利"
+    },
+    {
+      "strategyId": "band_ducklord",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/band_icon/band_ducklord.png",
+      "initiatorName": "鸭爵",
+      "name": "“神秘顾客”"
+    },
+    {
+      "strategyId": "band_rich",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/band_icon/band_rich.png",
+      "initiatorName": "琳琅诗怀雅",
+      "name": "最佳品味"
+    },
+    {
+      "strategyId": "band_substitute",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/band_icon/band_substitute.png",
+      "initiatorName": "巫恋",
+      "name": "替身娃娃"
+    },
+    {
+      "strategyId": "band_sell",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/band_icon/band_sell.png",
+      "initiatorName": "三船光平",
+      "name": "东之极道"
+    },
+    {
+      "strategyId": "band_support",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/band_icon/band_support.png",
+      "initiatorName": "雅拉",
+      "name": "人才锁定"
+    },
+    {
+      "strategyId": "band_high",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/band_icon/band_high.png",
+      "initiatorName": "渡桥",
+      "name": "专享情报"
+    },
+    {
+      "strategyId": "band_equipment",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/band_icon/band_equipment.png",
+      "initiatorName": "Mechanist",
+      "name": "精巧设计"
+    },
+    {
+      "strategyId": "band_pudd",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/band_icon/band_pudd.png",
+      "initiatorName": "布丁",
+      "name": "电气化！"
+    },
+    {
+      "strategyId": "band_closeout",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/band_icon/band_closeout.png",
+      "initiatorName": "拜松",
+      "name": "打包速递"
+    },
+    {
+      "strategyId": "band_pith",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/band_icon/band_pith.png",
+      "initiatorName": "Pith",
+      "name": "优等生"
+    },
+    {
+      "strategyId": "band_limit",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/band_icon/band_limit.png",
+      "initiatorName": "坚雷",
+      "name": "正直教官"
+    },
+    {
+      "strategyId": "band_bonus",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/band_icon/band_bonus.png",
+      "initiatorName": "复奏",
+      "name": "二重奏"
+    },
+    {
+      "strategyId": "band_yan2",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/band_icon/band_yan2.png",
+      "initiatorName": "望",
+      "name": "黑白相易"
+    },
+    {
+      "strategyId": "band_yan",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/band_icon/band_yan.png",
+      "initiatorName": "杜遥夜",
+      "name": "广交豪杰"
+    },
+    {
+      "strategyId": "band_sargon",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/band_icon/band_sargon.png",
+      "initiatorName": "娜仁图亚",
+      "name": "沙洲梦魇"
+    },
+    {
+      "strategyId": "band_pepe",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/band_icon/band_pepe.png",
+      "initiatorName": "佩佩",
+      "name": "博学多通"
+    },
+    {
+      "strategyId": "band_victoria",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/band_icon/band_victoria.png",
+      "initiatorName": "洛洛",
+      "name": "自发制造"
+    },
+    {
+      "strategyId": "band_harold",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/band_icon/band_harold.png",
+      "initiatorName": "哈洛德",
+      "name": "人才盲盒"
+    },
+    {
+      "strategyId": "band_egir",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/band_icon/band_egir.png",
+      "initiatorName": "歌蕾蒂娅",
+      "name": "猎人战法"
+    },
+    {
+      "strategyId": "band_clementia",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/band_icon/band_clementia.png",
+      "initiatorName": "克莱门莎",
+      "name": "崇高牺牲"
+    },
+    {
+      "strategyId": "band_kazimier",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/band_icon/band_kazimier.png",
+      "initiatorName": "焰尾",
+      "name": "骑士团长"
+    },
+    {
+      "strategyId": "band_mlynar",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/band_icon/band_mlynar.png",
+      "initiatorName": "玛恩纳",
+      "name": "业务指标"
+    },
+    {
+      "strategyId": "band_kjerag2",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/band_icon/band_kjerag2.png",
+      "initiatorName": "耶拉",
+      "name": "不融信念"
+    },
+    {
+      "strategyId": "band_kjerag",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/band_icon/band_kjerag.png",
+      "initiatorName": "休露丝",
+      "name": "雪域礼赠"
+    },
+    {
+      "strategyId": "band_siracusa",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/band_icon/band_siracusa.png",
+      "initiatorName": "裁度",
+      "name": "量体裁衣"
+    },
+    {
+      "strategyId": "band_bond",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/band_icon/band_bond.png",
+      "initiatorName": "贾维",
+      "name": "团伙行动"
+    },
+    {
+      "strategyId": "band_lethania",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/band_icon/band_lethania.png",
+      "initiatorName": "车尔尼",
+      "name": "流动乐章"
+    },
+    {
+      "strategyId": "band_ursus",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/band_icon/band_ursus.png",
+      "initiatorName": "怒潮凛冬",
+      "name": "无惧风雪"
+    },
+    {
+      "strategyId": "band_iberia",
+      "iconUrl": "https://web.hycdn.cn/arknights/game/assets/auto_chess/band_icon/band_iberia.png",
+      "initiatorName": "引星棘刺",
+      "name": "出航时刻"
+    }
+  ]
+}

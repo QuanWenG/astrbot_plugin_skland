@@ -1,0 +1,21 @@
+{
+  "source": "https://assets.skland.com/_static_assets/game-tools/stronghold-Bj4V0ohk.js",
+  "badges": [
+    {
+      "file": "phase_0.png",
+      "sourceSymbol": "at"
+    },
+    {
+      "file": "phase_1.png",
+      "sourceSymbol": "ot"
+    },
+    {
+      "file": "phase_2.png",
+      "sourceSymbol": "st"
+    },
+    {
+      "file": "promoted.png",
+      "sourceSymbol": "ct"
+    }
+  ]
+}

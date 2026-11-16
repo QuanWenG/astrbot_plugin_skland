@@ -23,6 +23,7 @@ from .skland.cards import (
     render_operator_roster,
     render_rogue_card,
     render_rogue_info,
+    render_garrison_history,
 )
 from .skland.box_pagination import parse_box_page_arguments
 from .skland.config import RES_DIR, configure_paths
@@ -45,7 +46,7 @@ from .skland.card_cache import ark_card_cache
 from pydantic import TypeAdapter
 from .skland.store import SklandStore
 
-PLUGIN_VERSION = "2.7.6"
+PLUGIN_VERSION = "2.7.29"
 
 HELP = """森空岛助手（sk / skland）
 绑定：森空岛绑定 <token|cred>｜扫码绑定/扫码登录｜森空岛解绑（所有群聊、私聊可用，绑定成功后直接保存，解绑需确认）
@@ -55,6 +56,7 @@ HELP = """森空岛助手（sk / skland）
 查询：/sk card｜/sk efcard [-a] [-s]；查询、签到、导入可加 -r <角色序号>
 签到：明日方舟签到｜签到详情｜终末地签到｜终末地签到详情
 肉鸽：树海/界园/萨卡兹/萨米/水月/傀影肉鸽｜战绩详情 <序号> [-f]
+卫戍协议：卫戍协议 [-r 角色序号]｜/sk garrison [-r 角色序号]（赛季统计、最近 20 条，每行 4 个）
 抽卡：方舟抽卡记录 [-b 起始] [-l 结束]｜导入抽卡记录 <URL>
       终末地抽卡记录 [-b 起始] [-l 结束]（自动更新，可用负数切片）
 战争回响：/sk efwar [-s 赛季] [-w 轮换] [-r 角色]（负数赛季回溯）
@@ -65,13 +67,13 @@ HELP = """森空岛助手（sk / skland）
 
 BUILTIN_COMMANDS = {
     "sk", "skland", "bind", "qrcode", "unbind", "char", "card", "efcard", "box", "clue",
-    "rogue", "rginfo", "gacha", "efgacha", "efwar", "import", "arksign", "efsign", "sync", "background", "help",
+    "rogue", "rginfo", "garrison", "gacha", "efgacha", "efwar", "import", "arksign", "efsign", "sync", "background", "help",
     "sanity", "理智订阅", "理智取消", "理智订阅状态", "理智提醒测试",
     "version", "版本",
     "森空岛绑定", "扫码绑定", "扫码登录", "森空岛解绑", "明日方舟签到", "签到详情", "全体签到", "全体签到详情",
     "终末地签到", "终末地签到详情", "终末地全体签到", "终末地全体签到详情", "角色更新", "全体角色更新", "资源更新",
     "方舟抽卡记录", "导入抽卡记录", "终末地抽卡记录", "终末地抽卡更新", "ef", "zmd", "战绩详情", "方舟干员", "收藏战绩详情",
-    "树海肉鸽", "界园肉鸽", "萨卡兹肉鸽", "萨米肉鸽", "水月肉鸽", "傀影肉鸽", "战争回响", "森空岛角色", "切换方舟角色", "切换终末地角色", "线索",
+    "树海肉鸽", "界园肉鸽", "萨卡兹肉鸽", "萨米肉鸽", "水月肉鸽", "傀影肉鸽", "战争回响", "卫戍协议", "森空岛角色", "切换方舟角色", "切换终末地角色", "线索",
 }
 
 
@@ -405,6 +407,11 @@ class SklandPlugin(Star):
         async for result in self._run(event, ["efwar", *shlex.split(str(args))]):
             yield result
 
+    @filter.command("卫戍协议")
+    async def shortcut_garrison(self, event: AstrMessageEvent, args: GreedyStr):
+        async for result in self._run(event, ["garrison", *shlex.split(str(args))]):
+            yield result
+
     @filter.command("background")
     async def shortcut_background(self, event: AstrMessageEvent):
         async for result in self._run(event, ["background"]):
@@ -438,7 +445,7 @@ class SklandPlugin(Star):
                     await self.store.remember_private_session(owner_id, str(event.unified_msg_origin))
             command = argv[0].lower() if argv else "card"
             role_index = None
-            if command in {"card", "efcard", "rogue", "box", "gacha", "efgacha", "efwar", "import", "clue", "rginfo", "arksign", "efsign"}:
+            if command in {"card", "efcard", "rogue", "garrison", "box", "gacha", "efgacha", "efwar", "import", "clue", "rginfo", "arksign", "efsign"}:
                 role_index, remainder = take_role(argv[1:])
                 argv = [command, *remainder]
             await react(event, "processing")
@@ -496,6 +503,14 @@ class SklandPlugin(Star):
                 background = await resolve_background(topic=data.topic)
                 await self._send_context_image(event, await render_rogue_card(data, background, server_name=char.display_server), "rogue",
                     {"rogue": {"data": data.model_dump(mode="json"), "role_id": char.id}, "background": {"uri": background}})
+            elif command == "garrison":
+                if len(argv) != 1:
+                    raise ValueError("用法：卫戍协议 [-r 角色序号] 或 /sk garrison [-r 角色序号]")
+                char, history = await self.service.garrison_history(owner_id, role_index)
+                render_options = ({"max_height": runtime_config.qq_image_max_side}
+                                  if event.get_platform_name() == "qq_official" else {})
+                await send_images(event, await render_garrison_history(history, char.nickname, **render_options),
+                                  prepare=image_output.prepare, title=f"{char.nickname} · 卫戍协议")
             elif command == "box":
                 target_owner, args = self._box_target_owner(event, argv[1:])
                 self._check_role_target(event, target_owner, role_index)

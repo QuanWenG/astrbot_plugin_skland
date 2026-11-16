@@ -13,6 +13,14 @@ from .filters import (
     ark_skin_portrait_url,
     ark_uniequip_icon_url,
     charId_to_avatarUrl,
+    garrison_avatar_url,
+    garrison_portrait_url,
+    garrison_equipment_icon,
+    garrison_operator_badge,
+    garrison_band_icon,
+    garrison_bond_icon,
+    garrison_trophy_icon,
+    garrison_decoration,
     charId_to_portraitUrl,
     ef_charId_to_avatarUrl,
     format_date_ymd,
@@ -31,6 +39,9 @@ from .filters import (
     time_to_next_monday_4am,
 )
 from .models import Character
+from .garrison import BOND_COLUMNS, GRID_COLUMNS, IMAGE_WIDTH, MAX_IMAGE_HEIGHT, build_garrison_pages
+from .garrison_assets import resolve_band_resources, resolve_bond_resources, resolve_equipment_resources
+from .schemas.arknights.garrison import GarrisonHistory
 from .renderer import template_to_pic
 from .schemas import (
     EfGachaView, BoundRolesCard, WarEchoesView,
@@ -137,6 +148,45 @@ async def render_rogue_card(props: RogueData, bg: str | Url, *, server_name: str
         device_scale_factor=1.5,
         screenshot_timeout=config.render_timeout,
     )
+
+
+async def render_garrison_history(
+    history: GarrisonHistory, nickname: str, *, max_height: int = MAX_IMAGE_HEIGHT,
+) -> list[bytes]:
+    """Render the latest 20 matches as four-column cards."""
+    images = []
+    placeholder = (RES_DIR / "images/garrison/operator_empty.svg").as_uri()
+    pages = build_garrison_pages(history, nickname, max_height=max_height)
+    overview = pages[0].overview
+    band_ids = {record["band_id"] for page in pages for record in page.records}
+    band_ids.update(item["id"] for item in overview["strategies"])
+    bond_ids = {bond["id"] for page in pages for record in page.records for bond in record["bonds"]}
+    bond_ids.update(item["id"] for item in overview["bonds"])
+    bands = await resolve_band_resources(band_ids)
+    bonds = await resolve_bond_resources(bond_ids)
+    item_ids = {equip["id"] for page in pages for record in page.records for unit in record["squad"] for equip in (unit["equips"] or [])}
+    equipment = await resolve_equipment_resources(item_ids)
+    for page in pages:
+        images.append(await template_to_pic(
+            template_path=str(TEMPLATES_DIR),
+            template_name="garrison.html.jinja2",
+            templates={"page": page, "placeholder": placeholder,
+                       "image_width": IMAGE_WIDTH, "grid_columns": GRID_COLUMNS,
+                       "bond_columns": BOND_COLUMNS, "bond_resources": bonds, "band_resources": bands,
+                       "equipment_resources": equipment},
+            filters={"garrison_avatar_url": garrison_avatar_url,
+                     "garrison_portrait_url": garrison_portrait_url,
+                     "garrison_operator_badge": garrison_operator_badge,
+                     "garrison_equipment_icon": lambda item_id: garrison_equipment_icon(item_id, equipment.get(item_id, {}).get("iconUrl", "")),
+                     "garrison_trophy_icon": garrison_trophy_icon,
+                     "garrison_decoration": garrison_decoration,
+                     "garrison_bond_icon": lambda bond_id: garrison_bond_icon(bond_id, bonds.get(bond_id, {}).get("iconUrl", "")),
+                     "garrison_band_icon": lambda band_id: garrison_band_icon(band_id, bands.get(band_id, {}).get("iconUrl", ""))},
+            pages={"viewport": {"width": IMAGE_WIDTH, "height": 1}, "base_url": f"file://{TEMPLATES_DIR}"},
+            screenshot_timeout=config.render_timeout,
+            readiness="resources",
+        ))
+    return images
 
 
 async def render_rogue_info(

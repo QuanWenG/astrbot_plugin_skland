@@ -1,0 +1,31 @@
+{
+  "seasonId": "act3autochess",
+  "sourcePage": "https://game.skland.com/arknights/stronghold-guide/edit",
+  "sourceResource": "https://zonai.skland.com/api/v1/game/garrison/guide/resource?seasonId=act3autochess",
+  "sourceScripts": [
+    "https://assets.skland.com/_static_assets/game-tools/StrongholdGuide-DEtbCvBe.js",
+    "https://assets.skland.com/_static_assets/game-tools/stronghold-Bj4V0ohk.js"
+  ],
+  "assets": {
+    "page_background": {
+      "file": "page_background.jpg",
+      "url": "https://bbs.hycdn.cn/image/2026/11/06/9a9c33b6dd9c100239bd2fd0a074b19e.jpg"
+    },
+    "season_logo": {
+      "file": "season_logo.png",
+      "url": "https://bbs.hycdn.cn/image/2026/11/06/49f5b200839ae325dcb6fef5739a239a.png"
+    },
+    "page_texture": {
+      "file": "page_texture.jpg",
+      "url": "https://assets.skland.com/_static_assets/game-tools/bg-texture-CEr4_3YI.jpg"
+    },
+    "card_background": {
+      "file": "card_background.png",
+      "url": "https://assets.skland.com/_static_assets/game-tools/bg_texture-CwniLq08.png"
+    },
+    "header_decoration": {
+      "file": "header_decoration.png",
+      "url": "https://assets.skland.com/_static_assets/game-tools/deco-BXFxoRto.png"
+    }
+  }
+}
